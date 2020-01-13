@@ -2,6 +2,8 @@ package com.example.bachelorarbeit.types;
 
 import android.util.Log;
 
+import com.google.android.gms.nearby.connection.Payload;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -11,14 +13,14 @@ import java.io.ObjectOutputStream;
 public abstract class PayloadType {
     String type;
 
-    public byte[] serialize() {
+    public Payload serialize() {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ObjectOutputStream os = new ObjectOutputStream(out);
             os.writeObject(this);
             os.flush();
             os.close();
-            return out.toByteArray();
+            return Payload.fromBytes(out.toByteArray());
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -32,11 +34,7 @@ public abstract class PayloadType {
             ObjectInputStream is = new ObjectInputStream(in);
             return is.readObject();
         }
-        catch (IOException e){
-            e.printStackTrace();
-            return null;
-        }
-        catch (ClassNotFoundException e){
+        catch (IOException | ClassNotFoundException e){
             e.printStackTrace();
             return null;
         }

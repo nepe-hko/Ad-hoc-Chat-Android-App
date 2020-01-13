@@ -16,8 +16,8 @@ public class RREP extends PayloadType  {
         super.type = "RREP";
         this.uID = rreq.getUID();
         this.destinationID = rreq.getSourceID();
-        this.route = rreq.getRouteReverse();
-        this.route.
+        //this.route = rreq.getRouteReverse();
+        //this.route.
     }
 
     //public String getSourceID() { return sourceID; }

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Activitys.ChatOverviewActivity">
+
+    <TextView
+        android:id="@+id/receivedView"
+        android:layout_width="361dp"
+        android:layout_height="315dp"
+        android:layout_marginTop="28dp"
+        android:scrollbars="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.488"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/sendView"
+        android:layout_width="369dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="24dp"
+        android:inputType="textMultiLine"
+        android:maxLines="3"
+        android:minLines="2"
+        android:padding="10dp"
+        android:scrollbars="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/receivedView" />
+
+    <Button
+        android:id="@+id/send_btn"
+        android:layout_width="149dp"
+        android:layout_height="53dp"
+        android:layout_marginTop="20dp"
+        android:text="Send"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.384"
+        app:layout_constraintStart_toEndOf="@+id/receivername"
+        app:layout_constraintTop_toBottomOf="@+id/sendView" />
+
+    <Spinner
+        android:id="@+id/receivername"
+        android:layout_width="216dp"
+        android:layout_height="51dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/sendView" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

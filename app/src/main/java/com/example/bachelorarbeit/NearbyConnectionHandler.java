@@ -10,6 +10,7 @@ import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback;
 import com.google.android.gms.nearby.connection.ConnectionResolution;
+import com.google.android.gms.nearby.connection.ConnectionsClient;
 import com.google.android.gms.nearby.connection.ConnectionsStatusCodes;
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
 import com.google.android.gms.nearby.connection.DiscoveryOptions;
@@ -20,6 +21,7 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -32,23 +34,22 @@ public class NearbyConnectionHandler implements Discoverer {
     private final List<String> connectedDevices;
     private final NearbyReceiver receiver;
     private final TimeoutManager discoveryTimeoutManager;
+    private final ConnectionsClient connectionsClient;
 
-
-    public NearbyConnectionHandler(Context context, String myID, NearbyReceiver receiver) {
+    NearbyConnectionHandler(Context context, String myID, NearbyReceiver receiver) {
         this.context = context;
         this.myID = myID;
         this.receiver = receiver;
-        this.connectedDevices = new ArrayList<>();
+        this.connectedDevices = Collections.synchronizedList(new ArrayList<>());
         this.discoveryTimeoutManager = new TimeoutManager(this);
+        this.connectionsClient = Nearby.getConnectionsClient(context);
         startAdvertise();
     }
-
 
     private ConnectionLifecycleCallback clc = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String s, @NonNull ConnectionInfo connectionInfo) {
-            Nearby.getConnectionsClient(context)
-                .acceptConnection(myID, new PayloadCallback() {
+            connectionsClient.acceptConnection(myID, new PayloadCallback() {
                     @Override
                     public void onPayloadReceived(@NonNull String s, @NonNull Payload payload) {
                         receiver.receive(payload.asBytes());
@@ -81,8 +82,7 @@ public class NearbyConnectionHandler implements Discoverer {
 
         AdvertisingOptions options = new AdvertisingOptions.Builder().setStrategy(STRATEGY).build();
 
-        Nearby.getConnectionsClient(context)
-                .startAdvertising(myID, SERVICE_ID, clc, options)
+        connectionsClient.startAdvertising(myID, SERVICE_ID, clc, options)
                 .addOnSuccessListener( (Void unused) -> Log.d("Advertise", "start Advertise..."))
                 .addOnFailureListener( (Exception e) -> Log.e("Advertise", "not able to Advertise"));
     }
@@ -92,45 +92,51 @@ public class NearbyConnectionHandler implements Discoverer {
 
         discoveryTimeoutManager.startTimer();
 
+        if (discoveryTimeoutManager.isDiscovery()) {
+            return;
+        }
+
+        EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
+            @Override
+            public void onEndpointFound(@NonNull String endpointID, @NonNull DiscoveredEndpointInfo discoveredEndpointInfo) {
+                connectionsClient.requestConnection(myID, endpointID, clc)
+                        .addOnSuccessListener((Void unused) -> connectedDevices.add(endpointID))
+                        .addOnFailureListener((Exception e) -> Log.e("Discover", "Could not connect to Endpoint " + endpointID));
+            }
+
+            @Override
+            public void onEndpointLost(@NonNull String endpointID) {
+                Log.d("Discover", "The previously discovered endpoint (" + endpointID + ") has gone away");
+                connectedDevices.remove(endpointID);
+            }
+        };
+
         DiscoveryOptions options = new DiscoveryOptions.Builder().setStrategy(STRATEGY).build();
-        Nearby.getConnectionsClient(context)
-                .startDiscovery(SERVICE_ID, endpointDiscoveryCallback, options)
+
+        connectionsClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, options)
                 .addOnSuccessListener( (Void unused ) -> Log.e("Discover", "start Discover..."))
                 .addOnFailureListener( (Exception e) -> Log.e("Discover", "Unable to Discover"));
     }
 
     @Override
     public void onDiscoveryTimerExpired() {
-        Nearby.getConnectionsClient(context).stopDiscovery();
+        connectionsClient.stopDiscovery();
         Log.e("Discover", "...stop Discover");
     }
 
 
-    private final EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
-        @Override
-        public void onEndpointFound(@NonNull String endpointID, @NonNull DiscoveredEndpointInfo discoveredEndpointInfo) {
-            Nearby.getConnectionsClient(context)
-                    .requestConnection(myID, endpointID, clc)
-                    .addOnSuccessListener( (Void unused) -> connectedDevices.add(endpointID))
-                    .addOnFailureListener( (Exception e) -> Log.e("Discover", "Could not connect to Endpoint " + endpointID));
-        }
-
-        @Override
-        public void onEndpointLost(@NonNull String endpointID) {
-            Log.d("Discover", "The previously discovered endpoint (" + endpointID + ") has gone away");
-        }
-    };
-
     // liefert die gewünschte EndpointID zurück, wenn verbunden
-    CompletableFuture<String> get(String endpointID) {
+    CompletableFuture<String> connect(String endpointID) {
 
-        if(!connectedDevices.contains(endpointID)) {
-            startDiscover();
+        if(connectedDevices.contains(endpointID)) {
+            return CompletableFuture.completedFuture(endpointID);
         }
 
-        return CompletableFuture.completedFuture(endpointID)
-        .thenApplyAsync( id -> {
-            while(!connectedDevices.contains(id)) {
+        startDiscover();
+
+        return CompletableFuture.supplyAsync( () -> {
+            while(true) {
+                if (connectedDevices.contains(endpointID)) break;
             }
             return endpointID;
         });
@@ -138,7 +144,7 @@ public class NearbyConnectionHandler implements Discoverer {
     }
 
     // liefert nach 10 Sekunden alle verbundenen Endpoints zurück
-    CompletableFuture<List<String>> getAll() {
+    CompletableFuture<List<String>> connectAll() {
 
         startDiscover();
 

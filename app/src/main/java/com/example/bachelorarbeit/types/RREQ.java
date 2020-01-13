@@ -14,6 +14,8 @@ public class RREQ extends PayloadType  {
     public RREQ (String sourceID, String destinationID) {
         super.type = "RREQ";
         this.uID = UUID.randomUUID().toString();
+        this.sourceID = sourceID;
+        this.destinationID = destinationID;
     }
 
     public void addEndpointToRoute(String endpointID) {

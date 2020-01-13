@@ -35,6 +35,11 @@ class TimeoutManager {
     }
 
     private void timerExpired() {
+
         discoverer.onDiscoveryTimerExpired();
+    }
+
+    public boolean isDiscovery() {
+        return this.isRunning;
     }
 }
