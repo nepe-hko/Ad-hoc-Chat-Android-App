@@ -4,12 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:windowSoftInputMode="adjustPan"
     tools:context=".Activitys.ChatOverviewActivity">
 
     <TextView
         android:id="@+id/receivedView"
-        android:layout_width="361dp"
-        android:layout_height="315dp"
+        android:layout_width="359dp"
+        android:layout_height="74dp"
         android:layout_marginTop="28dp"
         android:scrollbars="vertical"
         app:layout_constraintEnd_toEndOf="parent"

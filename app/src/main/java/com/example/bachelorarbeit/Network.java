@@ -1,32 +1,41 @@
 package com.example.bachelorarbeit;
 
 import android.content.Context;
+import android.os.Build;
 
+import androidx.annotation.RequiresApi;
+
+import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
-import com.google.android.gms.nearby.connection.Payload;
 
 public class Network implements NearbyReceiver {
 
     private final Context context;
-    private final String myID = "k45skf04u5s";
+    private final String myID;
     private final DSRRouter router;
     private final ConnectionsClient connectionsClient;
-
+    private final TestServer testServer;
 
     private NearbyConnectionHandler nearby;
 
-    public Network(Context context) {
+    public Network(Context context, String username, TestServer testServer) {
         this.context = context;
-        this.nearby = new NearbyConnectionHandler(context, myID, this);
-        this.router = new DSRRouter(context, this.nearby, myID);
+        this.myID = username;
+        this.testServer = testServer;
+        this.nearby = new NearbyConnectionHandler(context, myID, testServer, this);
+        this.router = new DSRRouter(context, this.nearby, myID, testServer);
         this.connectionsClient = Nearby.getConnectionsClient(context);
+
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void sendText(String destinationID, String message) {
+
+        testServer.echo(myID + ": sendText("+ message + ") to " + destinationID);
 
         DATA dataPackage = new DATA(myID, destinationID, message);
 

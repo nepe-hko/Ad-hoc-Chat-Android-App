@@ -1,7 +1,5 @@
 package com.example.bachelorarbeit.types;
 
-import android.util.Log;
-
 import com.google.android.gms.nearby.connection.Payload;
 
 import java.io.ByteArrayInputStream;
@@ -9,8 +7,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
-public abstract class PayloadType {
+public abstract class PayloadType implements Serializable {
     String type;
 
     public Payload serialize() {

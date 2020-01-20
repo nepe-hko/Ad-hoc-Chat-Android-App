@@ -26,4 +26,12 @@ public class Route {
         return endpointIDs.get(myIndex + 1);
     }
 
+    public String getHopBefore(String myID) {
+        int myIndex = endpointIDs.indexOf(myID);
+        if (myIndex == 0)
+            return null;
+        else
+            return endpointIDs.get(myIndex - 1);
+    }
+
 }
