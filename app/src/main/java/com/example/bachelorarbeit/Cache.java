@@ -1,18 +1,12 @@
 package com.example.bachelorarbeit;
 
 import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class Cache {
 
-    private Map<String,Route> routes;
+    private final Map<String,Route> routes;
 
     public Cache() {
         this.routes = new HashMap<>();

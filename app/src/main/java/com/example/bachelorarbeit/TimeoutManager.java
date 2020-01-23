@@ -11,21 +11,20 @@ class TimeoutManager {
     private Timer timer;
     private final static int seconds = 20;
     private boolean isRunning = false;
-    private final TestServer testServer;
 
-    TimeoutManager(Discoverer discoverer, TestServer testServer) {
+
+    TimeoutManager(Discoverer discoverer) {
         this.discoverer = discoverer;
         this.timer = new Timer();
-        this.testServer = testServer;
     }
 
     void startTimer() {
 
-        testServer.echo("start Discovery Timer");
+        TestServer.echo("start Discovery Timer");
 
         // cancel if timer is running
         if(isRunning){
-            testServer.echo("restart Discovery Timer");
+            TestServer.echo("restart Discovery Timer");
             timer = new Timer();
         }
 
@@ -43,7 +42,7 @@ class TimeoutManager {
     private void timerExpired() {
         isRunning = false;
         discoverer.onDiscoveryTimerExpired();
-        testServer.echo("Discovery Timer expired");
+        TestServer.echo("Discovery Timer expired");
     }
 
     public boolean isDiscovery() {

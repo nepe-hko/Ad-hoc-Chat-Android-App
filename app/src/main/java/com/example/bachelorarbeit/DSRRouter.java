@@ -2,7 +2,6 @@ package com.example.bachelorarbeit;
 
 import android.content.Context;
 import android.util.Log;
-
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.MACK;
@@ -12,40 +11,36 @@ import com.example.bachelorarbeit.types.RREQ;
 import com.example.bachelorarbeit.types.UACK;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import java9.util.concurrent.CompletableFuture;
 
 
 class DSRRouter {
+
     private final Cache cache;
     private final List<String> seenPackages = new ArrayList<>(); //TODO: liste irgendwann wieder leeren
     private final ConnectionsClient connectionsClient;
     private final NearbyConnectionHandler nearby;
     private final String myID;
-    private final TestServer testServer;
 
-    DSRRouter(Context context, NearbyConnectionHandler nearby, String myID, TestServer testServer) {
-        this.testServer = testServer;
+    DSRRouter(Context context, NearbyConnectionHandler nearby, String myID) {
         this.cache = new Cache();
         this.connectionsClient = Nearby.getConnectionsClient(context);
         this.nearby = nearby;
         this.myID = myID;
-
     }
 
     CompletableFuture<Route> getRoute(String userID) {
         Log.d("DSRRouter", "getRoute(" + userID + ")");
-        testServer.echo("getRoute() to " + userID);
+        TestServer.echo("getRoute() to " + userID);
         return CompletableFuture.supplyAsync( () -> {
             Log.d("test", "supplyAsync");
             if (cache.hasRoute(userID)){
-                testServer.echo("Route to " + userID + " in Cache");
+                TestServer.echo("Route to " + userID + " in Cache");
                 return cache.getRoute(userID);
             }
-            testServer.echo("Route to " + userID + " not in Cache");
+            TestServer.echo("Route to " + userID + " not in Cache");
             routeDiscovery(userID).thenApply( route -> cache.getRoute(userID));
 
             while (true) {
@@ -59,20 +54,20 @@ class DSRRouter {
 
     private CompletableFuture<Route> routeDiscovery(String userID) {
         Log.d("DSRRouter", "RouteDiscovery(" + userID + ")");
-        testServer.echo("routeDiscovery to find Route to " + userID);
+        TestServer.echo("routeDiscovery to find Route to " + userID);
         // Send RREQ to all Devices in Range
         nearby.connectAll()
                 .thenAccept(  connectedDevices -> {
 
                     // if already connected to the searched device insert Route
                     if(connectedDevices.containsKey(userID)) {
-                        testServer.echo("insert Route to " + userID);
+                        TestServer.echo("insert Route to " + userID);
                         Log.d("test", "insert Route");
                         cache.setRoute(userID, new Route(userID));
                     }
                     // if not connected to the searched device make a RREQ to all connected devices
                     else {
-                        testServer.rreq(new ArrayList<>(connectedDevices.keySet()));
+                        TestServer.rreq(new ArrayList<>(connectedDevices.keySet()));
 
                         RREQ rreq = new RREQ(this.myID, userID);
                         List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
@@ -123,36 +118,36 @@ class DSRRouter {
     }
 
     private void handleMACK(MACK mack) {
-        testServer.echo("received MACK from " + mack.getOriginalSourceID() + " for Data Package with UID " + mack.getOriginalUID());
+        TestServer.echo("received MACK from " + mack.getOriginalSourceID() + " for Data Package with UID " + mack.getOriginalUID());
     }
 
     private void handleUACK(UACK uack) {
-        testServer.echo("received UACK from " + uack.getSourceID() + " for Data Package with UID " + uack.getOriginalUID() + " (Original Sender: " + uack.getOriginalSourceID());
+        TestServer.echo("received UACK from " + uack.getSourceID() + " for Data Package with UID " + uack.getOriginalUID() + " (Original Sender: " + uack.getOriginalSourceID());
     }
 
     private void handleDATA(DATA data) {
         String sender = data.getRoute().getHopBefore(myID);
         if (sender == null)
             sender = data.getSourceID();
-        testServer.echo("received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
+        TestServer.echo("received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
     }
 
     private void handleRERR(RERR rerr) {
         String sender = rerr.getRoute().getHopBefore(myID);
         if (sender == null)
             sender = rerr.getSourceID();
-        testServer.echo("received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
+        TestServer.echo("received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
     }
 
     private void handleRREP(RREP rrep) {
         String sender = rrep.getRoute().getHopBefore(myID);
-        testServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
+        TestServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
 
     }
 
     private void handleRREQ(RREQ rreq) {
 
-        testServer.echo("received RREQ with UID " + rreq.getUID());
+        TestServer.echo("received RREQ with UID " + rreq.getUID());
 
         // Route bekannt
         if (cache.hasRoute(rreq.getDestinationID())) {
