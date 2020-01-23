@@ -1,9 +1,8 @@
 package com.example.bachelorarbeit;
 
 import android.content.Context;
-import android.os.Build;
-
-import androidx.annotation.RequiresApi;
+import android.util.Log;
+import android.widget.TextView;
 
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
@@ -11,18 +10,21 @@ import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
 
+import org.w3c.dom.Text;
+
+import java.util.concurrent.TimeUnit;
+
 public class Network implements NearbyReceiver {
 
-    private final Context context;
+    private final TextView receivedView;
     private final String myID;
     private final DSRRouter router;
     private final ConnectionsClient connectionsClient;
     private final TestServer testServer;
+    private final NearbyConnectionHandler nearby;
 
-    private NearbyConnectionHandler nearby;
-
-    public Network(Context context, String username, TestServer testServer) {
-        this.context = context;
+    public Network(Context context, String username, TestServer testServer, TextView receivedView) {
+        this.receivedView = receivedView;
         this.myID = username;
         this.testServer = testServer;
         this.nearby = new NearbyConnectionHandler(context, myID, testServer, this);
@@ -31,22 +33,22 @@ public class Network implements NearbyReceiver {
 
     }
 
+    public void sendText(String userID, String message) {
+        Log.d("Network", "sendText()");
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public void sendText(String destinationID, String message) {
+        testServer.echo("sendText("+ message + ") to " + userID);
 
-        testServer.echo(myID + ": sendText("+ message + ") to " + destinationID);
-
-        DATA dataPackage = new DATA(myID, destinationID, message);
+        DATA dataPackage = new DATA(myID, userID, message);
 
         // Nachricht im Chatfenster als abgesendet darstellen
 
         // Route holen
-        router.getRoute(destinationID)
+        router.getRoute(userID)
                 // Mit nächstem Hop verbinden
                 .thenApplyAsync( route -> nearby.connect(route.getNextHop(myID))
+
                 // Nachricht senden
-                .thenAccept( id -> connectionsClient.sendPayload(id, dataPackage.serialize())));
+                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize())));
 
         // ACK erhalten -> Nachricht im Chatfenster als zugestellt darstellen
 
@@ -58,13 +60,16 @@ public class Network implements NearbyReceiver {
 
         Object payload = PayloadType.deserialize(data);
         assert payload != null;
-        String payloadType = payload.getClass().toString();
+        String payloadType = payload.getClass().getSimpleName();
 
+        Log.d("test", "payload type: " + payloadType);
         // Für mich bestimmte Nachrichten werden gespeichert
         if (payloadType.equals("DATA")) {
             DATA receivedData = (DATA)payload;
             if (receivedData.getDestinationID().equals(myID)) {
-                Message message = new Message(receivedData);
+                String text = receivedData.getMessage();
+                this.receivedView.setText(receivedData.getSourceID() + " -> " + myID + ": " + text + "\n" + receivedView.getText());
+                testServer.echo("received a Message " + text);
             }
         }
 

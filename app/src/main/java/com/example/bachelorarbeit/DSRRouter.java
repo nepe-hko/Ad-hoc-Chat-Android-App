@@ -1,10 +1,7 @@
 package com.example.bachelorarbeit;
 
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
-
-import androidx.annotation.RequiresApi;
 
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
@@ -17,9 +14,10 @@ import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+
+import java9.util.concurrent.CompletableFuture;
+
 
 class DSRRouter {
     private final Cache cache;
@@ -38,44 +36,59 @@ class DSRRouter {
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    CompletableFuture<Route> getRoute(String endpointID) {
-        testServer.echo(myID + ": getRoute() to " + endpointID);
+    CompletableFuture<Route> getRoute(String userID) {
+        Log.d("DSRRouter", "getRoute(" + userID + ")");
+        testServer.echo("getRoute() to " + userID);
         return CompletableFuture.supplyAsync( () -> {
-            if (cache.hasRoute(endpointID)){
-                testServer.echo(myID + ": Route to " + endpointID + " in Cache");
-                return cache.getRoute(endpointID);
+            Log.d("test", "supplyAsync");
+            if (cache.hasRoute(userID)){
+                testServer.echo("Route to " + userID + " in Cache");
+                return cache.getRoute(userID);
             }
-            testServer.echo(myID + ": Route to " + endpointID + " not in Cache");
-            routeDiscovery(endpointID).thenApply( route -> cache.getRoute(endpointID));
-            return null; // falsch, nur zu testzweck eingefügt
+            testServer.echo("Route to " + userID + " not in Cache");
+            routeDiscovery(userID).thenApply( route -> cache.getRoute(userID));
+
+            while (true) {
+                if (cache.hasRoute(userID)) break;
+            }
+            return cache.getRoute(userID);
         });
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private CompletableFuture<Route> routeDiscovery(String endpointID) {
-        testServer.echo(myID + ": routeDiscovery to find Route to " + endpointID);
+
+    private CompletableFuture<Route> routeDiscovery(String userID) {
+        Log.d("DSRRouter", "RouteDiscovery(" + userID + ")");
+        testServer.echo("routeDiscovery to find Route to " + userID);
         // Send RREQ to all Devices in Range
         nearby.connectAll()
                 .thenAccept(  connectedDevices -> {
-                    Log.d("test", "in thenAccept");
-                    RREQ rreq = new RREQ(this.myID, endpointID);
 
-                    List<String> receivers = new ArrayList<>(connectedDevices.values());
-                    testServer.rreq(myID, receivers);
-                    receivers.forEach(element -> Log.d("test", element));
-                    connectionsClient.sendPayload(receivers , rreq.serialize());
+                    // if already connected to the searched device insert Route
+                    if(connectedDevices.containsKey(userID)) {
+                        testServer.echo("insert Route to " + userID);
+                        Log.d("test", "insert Route");
+                        cache.setRoute(userID, new Route(userID));
+                    }
+                    // if not connected to the searched device make a RREQ to all connected devices
+                    else {
+                        testServer.rreq(new ArrayList<>(connectedDevices.keySet()));
+
+                        RREQ rreq = new RREQ(this.myID, userID);
+                        List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
+                        connectionsClient.sendPayload(receiverKeys , rreq.serialize());
+                    }
+
 
                 });
         // Warten bis Route im Cache ist
         while(true){
-            if (cache.hasRoute(endpointID)) break;
+            if (cache.hasRoute(userID)) break;
 
         }
-        return CompletableFuture.completedFuture(cache.getRoute(endpointID));
+        Log.d("test", "return route from route Discovery");
+        return CompletableFuture.completedFuture(cache.getRoute(userID));
 
-        //TODO: wenn nach bestimmter zeit Route nicht verfügbar ist, return null;
 
     }
 
@@ -110,36 +123,36 @@ class DSRRouter {
     }
 
     private void handleMACK(MACK mack) {
-        testServer.echo(myID + ": received MACK from " + mack.getOriginalSourceID() + " for Data Package with UID " + mack.getOriginalUID());
+        testServer.echo("received MACK from " + mack.getOriginalSourceID() + " for Data Package with UID " + mack.getOriginalUID());
     }
 
     private void handleUACK(UACK uack) {
-        testServer.echo(myID + ": received UACK from " + uack.getSourceID() + " for Data Package with UID " + uack.getOriginalUID() + " (Original Sender: " + uack.getOriginalSourceID());
+        testServer.echo("received UACK from " + uack.getSourceID() + " for Data Package with UID " + uack.getOriginalUID() + " (Original Sender: " + uack.getOriginalSourceID());
     }
 
     private void handleDATA(DATA data) {
         String sender = data.getRoute().getHopBefore(myID);
         if (sender == null)
             sender = data.getSourceID();
-        testServer.echo(myID + ": received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
+        testServer.echo("received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
     }
 
     private void handleRERR(RERR rerr) {
         String sender = rerr.getRoute().getHopBefore(myID);
         if (sender == null)
             sender = rerr.getSourceID();
-        testServer.echo(myID + ": received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
+        testServer.echo("received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
     }
 
     private void handleRREP(RREP rrep) {
         String sender = rrep.getRoute().getHopBefore(myID);
-        testServer.echo(myID + ": received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
+        testServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
 
     }
 
     private void handleRREQ(RREQ rreq) {
 
-        testServer.echo(myID + ": received RREQ with UID " + rreq.getUID());
+        testServer.echo("received RREQ with UID " + rreq.getUID());
 
         // Route bekannt
         if (cache.hasRoute(rreq.getDestinationID())) {

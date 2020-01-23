@@ -8,27 +8,25 @@ import java.util.TimerTask;
 class TimeoutManager {
 
     private final Discoverer discoverer;
-    private final Timer timer;
+    private Timer timer;
     private final static int seconds = 20;
     private boolean isRunning = false;
     private final TestServer testServer;
-    private final String myID;
 
-    TimeoutManager(Discoverer discoverer, String myID, TestServer testServer) {
+    TimeoutManager(Discoverer discoverer, TestServer testServer) {
         this.discoverer = discoverer;
         this.timer = new Timer();
         this.testServer = testServer;
-        this.myID = myID;
     }
 
     void startTimer() {
 
-        testServer.echo(myID + ": start Discovery Timer");
+        testServer.echo("start Discovery Timer");
 
         // cancel if timer is running
         if(isRunning){
-            testServer.echo(myID + ": restart Discovery Timer");
-            timer.cancel();
+            testServer.echo("restart Discovery Timer");
+            timer = new Timer();
         }
 
         // start new timer
@@ -37,16 +35,15 @@ class TimeoutManager {
             @Override
             public void run() {
                 timerExpired();
-                isRunning = false;
             }
         },seconds * 1000);
 
     }
 
     private void timerExpired() {
-
+        isRunning = false;
         discoverer.onDiscoveryTimerExpired();
-        testServer.echo(myID + ": Discovery Timer expired");
+        testServer.echo("Discovery Timer expired");
     }
 
     public boolean isDiscovery() {

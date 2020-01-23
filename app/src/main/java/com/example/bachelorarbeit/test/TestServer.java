@@ -2,18 +2,20 @@ package com.example.bachelorarbeit.test;
 
 import android.util.Log;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.List;
 
 public class TestServer {
 
     private Socket socket = null;
     private PrintWriter out;
+    private String myID;
+
+    public TestServer(String myID) {
+        this.myID = myID;
+    }
 
     public void connect(String ip, int port) {
         try {
@@ -39,13 +41,13 @@ public class TestServer {
 
     public void echo(String message) {
         if (socket == null) return;
-        new Thread( () -> this.out.println(message)).start();
+        new Thread( () -> this.out.println( myID + ": " + message)).start();
     }
 
 
-    public void rreq(String initiator, List<String> devices) {
+    public void rreq( List<String> devices) {
         if (socket == null) return;
         String devicesString = android.text.TextUtils.join(",", devices);
-        new Thread( () -> this.out.println(initiator + ": send RREQ to " + devicesString)).start();
+        new Thread( () -> this.out.println(myID + ": send RREQ to " + devicesString)).start();
     }
 }

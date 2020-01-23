@@ -14,6 +14,9 @@ public class DATA extends PayloadType  {
     public DATA (String sourceID, String destinationID, String message) {
         super.type = "DATA";
         this.uID = UUID.randomUUID().toString();
+        this.sourceID = sourceID;
+        this.destinationID = destinationID;
+        this.message = message;
     }
 
     public void addtoRoute(String endpointID) {
@@ -21,13 +24,10 @@ public class DATA extends PayloadType  {
     }
 
     public String getSourceID() { return sourceID; }
-    public void setSourceID(String sourceID) { this.sourceID = sourceID; }
     public String getUID() { return uID; }
-    public void setUID(String uID) { this.uID = uID; }
     public String getDestinationID() { return destinationID; }
-    public void setDestinationID(String destinationID) { this.destinationID = destinationID; }
     public Route getRoute() { return route; }
     public void setRoute(Route route) { this.route = route; }
     public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+
 }
