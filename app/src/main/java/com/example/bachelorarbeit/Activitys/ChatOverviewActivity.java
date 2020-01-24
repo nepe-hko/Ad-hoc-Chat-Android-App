@@ -14,9 +14,6 @@ import com.example.bachelorarbeit.types.User;
 
 public class ChatOverviewActivity extends AppCompatActivity {
 
-    private String TEST_SERVER_IP = "80.139.92.13";
-    private int TEST_SERVER_PORT = 3333;
-
     private String myID;
     private TextView receivedView;
     private EditText sendView;
@@ -38,9 +35,9 @@ public class ChatOverviewActivity extends AppCompatActivity {
         Button send = findViewById(R.id.send_btn);
         send.setOnClickListener(v -> send());
 
-        // connect to Websocket
+        // connect to websocket
         TestServer.setMyID(myID);
-        TestServer.connect(TEST_SERVER_IP, TEST_SERVER_PORT);
+        TestServer.connect();
 
         // create network
         network = new Network(getApplicationContext(), myID, receivedView);

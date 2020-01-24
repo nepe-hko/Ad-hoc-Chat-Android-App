@@ -87,6 +87,10 @@ class DSRRouter {
 
     }
 
+    public void deviceConnected(String userID) {
+        cache.setRoute(userID, new Route(userID));
+    }
+
     void receive(Object payload) {
 
         String payloadType = payload.getClass().toString();

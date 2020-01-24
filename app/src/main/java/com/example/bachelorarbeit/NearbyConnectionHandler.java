@@ -60,15 +60,19 @@ public class NearbyConnectionHandler implements Discoverer {
 
         @Override
         public void onConnectionResult(@NonNull String endpointID, @NonNull ConnectionResolution connectionResolution) {
+
+            String username = pendingDevices.get(endpointID);
+
             if(connectionResolution.getStatus().getStatusCode() == ConnectionsStatusCodes.STATUS_OK) {
-                String username = pendingDevices.get(endpointID);
+                receiver.onDeviceConnected(username);
                 connectedDevices.put(username, endpointID);
-                pendingDevices.remove(username);
                 TestServer.echo("connected to " + username);
             }
             else {
                 TestServer.echo("connection rejected from other side, or other connection issue");
             }
+
+            pendingDevices.remove(username);
         }
 
         @Override

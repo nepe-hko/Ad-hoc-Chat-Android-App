@@ -46,6 +46,7 @@ public class Network implements NearbyReceiver {
      * this function is called for incoming data from other devices
      * @param data data received from other device
      */
+    @Override
     public void receive(byte[] data) {
 
         // unpack payload
@@ -65,5 +66,10 @@ public class Network implements NearbyReceiver {
                 TestServer.echo("received a Message " + text);
             }
         }
+    }
+
+    @Override
+    public void onDeviceConnected(String userID) {
+        router.deviceConnected(userID);
     }
 }
