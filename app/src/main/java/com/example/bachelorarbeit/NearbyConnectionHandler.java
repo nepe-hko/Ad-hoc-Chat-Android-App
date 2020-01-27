@@ -76,9 +76,9 @@ public class NearbyConnectionHandler implements Discoverer {
         }
 
         @Override
-        public void onDisconnected(@NonNull String s) {
-            connectedDevices.remove(s);
-            TestServer.echo("lost connection to " + s);
+        public void onDisconnected(@NonNull String nearbyID) {
+            connectedDevices.remove(connectedDevices.get(nearbyID));
+            TestServer.echo("disconnected from " + connectedDevices.get(nearbyID));
         }
     };
 
@@ -122,10 +122,9 @@ public class NearbyConnectionHandler implements Discoverer {
             }
 
             @Override
-            public void onEndpointLost(@NonNull String endpointID) {
-                Log.d("Discover", "The previously discovered endpoint (" + endpointID + ") has gone away");
-                connectedDevices.remove(connectedDevices.get(endpointID));
-                TestServer.echo("lost connection to " + endpointID);
+            public void onEndpointLost(@NonNull String nearbyID) {
+                connectedDevices.remove(connectedDevices.get(nearbyID));
+                TestServer.echo("lost connection to " + connectedDevices.get(nearbyID));
             }
         };
 
@@ -144,7 +143,6 @@ public class NearbyConnectionHandler implements Discoverer {
         connectionsClient.acceptConnection(endpointID, new PayloadCallback() {
             @Override
             public void onPayloadReceived(@NonNull String s, @NonNull Payload payload) {
-                TestServer.echo("Payload received");
                 receiver.receive(payload.asBytes());
             }
 
@@ -152,7 +150,6 @@ public class NearbyConnectionHandler implements Discoverer {
             @Override
             public void onPayloadTransferUpdate(@NonNull String s, @NonNull PayloadTransferUpdate payloadTransferUpdate) {
                 // not used
-                TestServer.echo("Payload transferupdate");
             }
         })
                 .addOnSuccessListener(aVoid -> {})

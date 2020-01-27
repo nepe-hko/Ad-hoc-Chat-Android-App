@@ -67,7 +67,7 @@ class DSRRouter {
                     }
                     // if not connected to the searched device make a RREQ to all connected devices
                     else {
-                        TestServer.rreq(new ArrayList<>(connectedDevices.keySet()));
+                        TestServer.sendRREQ(new ArrayList<>(connectedDevices.keySet()), userID);
 
                         RREQ rreq = new RREQ(this.myID, userID);
                         List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
@@ -130,10 +130,14 @@ class DSRRouter {
     }
 
     private void handleDATA(DATA data) {
-        String sender = data.getRoute().getHopBefore(myID);
-        if (sender == null)
-            sender = data.getSourceID();
-        TestServer.echo("received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
+
+        TestServer.receivedDATA(data);
+        if (data.getDestinationID().equals(myID)) return;
+
+        // forward message to next hop
+        nearby.connect(data.getRoute().getNextHop(myID))
+                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, data.serialize()));
+
     }
 
     private void handleRERR(RERR rerr) {
@@ -151,22 +155,24 @@ class DSRRouter {
 
     private void handleRREQ(RREQ rreq) {
 
-        TestServer.echo("received RREQ with UID " + rreq.getUID());
+        TestServer.receivedRREQ(rreq);
 
-        // Route bekannt
+        if(seenPackages.contains(rreq.getUID())) return;
+
+        // route known -> send RREP back
         if (cache.hasRoute(rreq.getDestinationID())) {
             RREP rrep = new RREP(rreq, cache.getRoute(rreq.getDestinationID()));
-            //todo: unicast rrep
+            nearby.connect(rrep.getRoute().getNextHop(myID))
+                    .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
         }
-        // Route nicht bekannt und RREQ noch nie behandelt
-        else if (!seenPackages.contains(rreq.getUID())) {
+
+        // route not known -> broadcast RREQ
+        else {
             rreq.addEndpointToRoute(myID);
-            //todo: broadcast rreq
+            nearby.connectAll()
+                    .thenAccept(  connectedDevices -> connectionsClient.sendPayload(new ArrayList<>(connectedDevices.keySet()), rreq.serialize()));
         }
 
         seenPackages.add(rreq.getUID());
-
-
     }
-
 }

@@ -1,6 +1,10 @@
 package com.example.bachelorarbeit.test;
 
 import android.util.Log;
+
+import com.example.bachelorarbeit.types.DATA;
+import com.example.bachelorarbeit.types.RREQ;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -52,9 +56,20 @@ public class TestServer {
     }
 
 
-    public static void rreq( List<String> devices) {
+    public static void sendRREQ( List<String> devices, String searchedUserID) {
         if (socket == null) return;
         String devicesString = android.text.TextUtils.join(",", devices);
-        new Thread( () -> TestServer.out.println(myID + ": send RREQ to " + devicesString)).start();
+        new Thread( () -> TestServer.out.println(myID + ": send RREQ to " + devicesString + " to get Route to " + searchedUserID)).start();
+    }
+
+    public static void receivedDATA(DATA data) {
+        String sender = data.getRoute().getHopBefore(myID);
+        if (sender == null)
+            sender = data.getSourceID();
+        TestServer.echo("received DATA with UID " + data.getUID() + " from " + sender + " (Original Sender: " + data.getSourceID() + ", Destination: " + data.getDestinationID() + ")");
+    }
+
+    public static void receivedRREQ(RREQ rreq) {
+        TestServer.echo("received RREQ with UID " + rreq.getUID());
     }
 }

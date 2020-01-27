@@ -33,18 +33,15 @@ public class Network implements NearbyReceiver {
 
         DATA dataPackage = new DATA(myID, userID, message);
 
-        // Route holen
+        // get Route -> connect to next hop in route -> send Message to next hop
         router.getRoute(userID)
-                // Mit nächstem Hop verbinden
                 .thenApplyAsync( route -> nearby.connect(route.getNextHop(myID))
-                // Nachricht senden
-                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize()))
-                );
+                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize())));
     }
 
     /**
-     * this function is called for incoming data from other devices
-     * @param data data received from other device
+     * this function is called for incoming receivedDATA from other devices
+     * @param data receivedDATA received from other device
      */
     @Override
     public void receive(byte[] data) {
