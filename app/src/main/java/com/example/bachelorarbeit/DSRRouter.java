@@ -32,16 +32,15 @@ class DSRRouter {
     }
 
     CompletableFuture<Route> getRoute(String userID) {
-        Log.d("DSRRouter", "getRoute(" + userID + ")");
-        TestServer.echo("getRoute() to " + userID);
+
+
         return CompletableFuture.supplyAsync( () -> {
-            Log.d("test", "supplyAsync");
+
             if (cache.hasRoute(userID)){
-                TestServer.echo("Route to " + userID + " in Cache");
                 return cache.getRoute(userID);
             }
-            TestServer.echo("Route to " + userID + " not in Cache");
-            routeDiscovery(userID).thenApply( route -> cache.getRoute(userID));
+
+            routeDiscovery(userID);
 
             while (true) {
                 if (cache.hasRoute(userID)) break;
@@ -52,39 +51,24 @@ class DSRRouter {
 
 
 
-    private CompletableFuture<Route> routeDiscovery(String userID) {
-        Log.d("DSRRouter", "RouteDiscovery(" + userID + ")");
-        TestServer.echo("routeDiscovery to find Route to " + userID);
-        // Send RREQ to all Devices in Range
+    private void routeDiscovery(String userID) {
+
         nearby.connectAll()
                 .thenAccept(  connectedDevices -> {
 
                     // if already connected to the searched device insert Route
                     if(connectedDevices.containsKey(userID)) {
-                        TestServer.echo("insert Route to " + userID);
-                        Log.d("test", "insert Route");
                         cache.setRoute(userID, new Route(userID));
-                    }
-                    // if not connected to the searched device make a RREQ to all connected devices
-                    else {
-                        TestServer.sendRREQ(new ArrayList<>(connectedDevices.keySet()), userID);
-
-                        RREQ rreq = new RREQ(this.myID, userID);
-                        List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
-                        connectionsClient.sendPayload(receiverKeys , rreq.serialize());
+                        return;
                     }
 
+                    // if not connected to the searched device send a RREQ to all connected devices
+                    TestServer.sendRREQ(new ArrayList<>(connectedDevices.keySet()), userID);
+                    RREQ rreq = new RREQ(this.myID, userID);
+                    List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
+                    connectionsClient.sendPayload(receiverKeys , rreq.serialize());
 
                 });
-        // Warten bis Route im Cache ist
-        while(true){
-            if (cache.hasRoute(userID)) break;
-
-        }
-        Log.d("test", "return route from route Discovery");
-        return CompletableFuture.completedFuture(cache.getRoute(userID));
-
-
     }
 
     public void deviceConnected(String userID) {

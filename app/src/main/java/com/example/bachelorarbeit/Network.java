@@ -35,8 +35,9 @@ public class Network implements NearbyReceiver {
 
         // get Route -> connect to next hop in route -> send Message to next hop
         router.getRoute(userID)
-                .thenApplyAsync( route -> nearby.connect(route.getNextHop(myID))
-                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize())));
+                .thenCompose( route -> nearby.connect(route.getNextHop(myID)))
+                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize()));
+
     }
 
     /**

@@ -150,6 +150,7 @@ public class NearbyConnectionHandler implements Discoverer {
             @Override
             public void onPayloadTransferUpdate(@NonNull String s, @NonNull PayloadTransferUpdate payloadTransferUpdate) {
                 // not used
+
             }
         })
                 .addOnSuccessListener(aVoid -> {})

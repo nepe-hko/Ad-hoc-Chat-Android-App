@@ -12,7 +12,7 @@ import java.util.List;
 
 public class TestServer {
 
-    private static String TEST_SERVER_IP = "80.139.92.13";
+    private static String TEST_SERVER_IP = "80.139.87.232";
     private static int TEST_SERVER_PORT = 16443;
     private static Socket socket = null;
     private static PrintWriter out;
