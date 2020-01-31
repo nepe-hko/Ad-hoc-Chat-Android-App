@@ -1,37 +1,56 @@
 package com.example.bachelorarbeit;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class Route {
-    private List<String> hops = new ArrayList<>();
+public class Route implements Serializable {
+    private final List<String> hops;
 
     public Route(String hop) {
-        add(hop);
+        this.hops = new ArrayList<>();
+        addHop(hop);
     }
 
 
-    public void add(String hop) {
-        hops.add(hop);
+    public void addHop(String hop) {
+        this.hops.add(hop);
+    }
+
+    public void addHops(List<String> hops) {
+        this.hops.addAll(hops);
     }
 
     public String getNextHop(String myID) {
 
         // wenn meine eigene ID nicht in der Route auftaucht, dann an ersten Hop in Route senden
-        int myIndex = hops.indexOf(myID);
+        int myIndex = this.hops.indexOf(myID);
         if (myIndex == -1) {
-            return hops.get(0);
+            return this.hops.get(0);
         }
         // wenn meine eigene ID in der Route auftaucht, dann an den Hop nach mir senden
-        return hops.get(myIndex + 1);
+        return this.hops.get(myIndex + 1);
     }
 
+    // is only needed for testing
     public String getHopBefore(String myID) {
-        int myIndex = hops.indexOf(myID);
+        int myIndex = this.hops.indexOf(myID);
         if (myIndex == 0)
             return null;
         else
-            return hops.get(myIndex - 1);
+            return this.hops.get(myIndex - 1);
     }
 
+    public List<String> getHops() {
+        return this.hops;
+    }
+
+    public void reverse() {
+        Collections.reverse(this.hops);
+    }
+
+    public void remove(String userID) {
+        this.hops.remove(userID);
+    }
 }

@@ -2,6 +2,7 @@ package com.example.bachelorarbeit.types;
 
 import com.example.bachelorarbeit.Route;
 
+import java.util.List;
 import java.util.UUID;
 
 public class RREQ extends PayloadType  {
@@ -13,23 +14,41 @@ public class RREQ extends PayloadType  {
 
     public RREQ (String sourceID, String destinationID) {
         super.type = "RREQ";
+        this.route = new Route(sourceID);
         this.uID = UUID.randomUUID().toString();
         this.sourceID = sourceID;
         this.destinationID = destinationID;
+
     }
 
-    public void addEndpointToRoute(String endpointID) {
-        route.add(endpointID);
+    public void addEndpointToRoute(String userID) {
+        this.route.addHop(userID);
     }
 
-    public String getSourceID() { return sourceID; }
-    public void setSourceID(String sourceID) { this.sourceID = sourceID; }
-    public String getUID() { return uID; }
-    public void setUID(String uID) { this.uID = uID; }
-    public String getDestinationID() { return destinationID; }
-    public void setDestinationID(String destinationID) { this.destinationID = destinationID; }
-    public Route getRoute() { return route; }
-    public void setRoute(Route route) { this.route = route; }
+    public String getSourceID() {
+        return this.sourceID;
+    }
+
+    public String getUID() {
+        return this.uID;
+    }
+
+    public String getDestinationID() {
+        return this.destinationID;
+    }
+
+    public Route getRoute() {
+        return this.route;
+    }
+    public void setRoute(Route route) {
+        this.route = route;
+    }
+
+
+    public void addRouteToRoute(Route route) {
+        List<String> hops = route.getHops();
+        this.route.addHops(hops);
+    }
 
 
 }

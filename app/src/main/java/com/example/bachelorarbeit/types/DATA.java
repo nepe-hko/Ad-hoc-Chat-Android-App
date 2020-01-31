@@ -20,7 +20,7 @@ public class DATA extends PayloadType  {
     }
 
     public void addtoRoute(String endpointID) {
-        this.route.add(endpointID);
+        this.route.addHop(endpointID);
     }
 
     public String getSourceID() { return sourceID; }

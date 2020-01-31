@@ -12,21 +12,38 @@ public class RREP extends PayloadType  {
     private String destinationID;
     private Route route;
 
-    public RREP (RREQ rreq, Route route) {
+    public RREP (RREQ rreq) {
         super.type = "RREP";
         this.uID = rreq.getUID();
         this.destinationID = rreq.getSourceID();
-        //this.route = rreq.getRouteReverse();
-        //this.route.
+        this.route = rreq.getRoute();
+        reverseRoute();
     }
 
     //public String getSourceID() { return sourceID; }
     //public void setSourceID(String sourceID) { this.sourceID = sourceID; }
-    public String getUID() { return uID; }
-    public void setUID(String uID) { this.uID = uID; }
-    public String getDestinationID() { return destinationID; }
-    public void setDestinationID(String destinationID) { this.destinationID = destinationID; }
-    public Route getRoute() { return route; }
-    public void setRoute(Route route) { this.route = route; }
+    public String getUID() {
+        return this.uID;
+    }
+    public String getDestinationID() {
+        return this.destinationID;
+    }
+    public Route getRoute() {
+        return this.route;
+    }
+    public void setRoute(Route route) {
+        this.route = route;
+    }
 
+    public void reverseRoute() {
+        this.route.reverse();
+    }
+
+    public String getFirstHop() {
+        return this.route.getHops().get(0);
+    }
+
+    public void removeFromRoute(String myID) {
+        this.route.remove(myID);
+    }
 }

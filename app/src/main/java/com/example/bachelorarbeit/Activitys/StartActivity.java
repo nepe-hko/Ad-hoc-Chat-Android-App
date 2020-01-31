@@ -28,14 +28,12 @@ public class StartActivity extends AppCompatActivity {
         start_btn = findViewById(R.id.start_btn);
         spinner = findViewById(R.id.spinner);
         spinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, User.values()));
-        Log.d("test", "erfolgreich gestartet");
         ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
 
         start_btn.setOnClickListener(v -> {
 
             Intent intent = new Intent(this, ChatOverviewActivity.class);
             String user = spinner.getSelectedItem().toString();
-            Log.d("test", "Ausgewählter name:" + user);
             intent.putExtra("User", user); //Put your id to your next Intent
             startActivity(intent);
             //finish();

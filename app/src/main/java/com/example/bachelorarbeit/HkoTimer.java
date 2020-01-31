@@ -1,31 +1,28 @@
 package com.example.bachelorarbeit;
 
 import com.example.bachelorarbeit.test.TestServer;
-
 import java.util.Timer;
 import java.util.TimerTask;
 
-class TimeoutManager {
+class HkoTimer {
 
     private final Discoverer discoverer;
-    private Timer timer;
-    private final static int seconds = 20;
+    private java.util.Timer timer;
+    private final static int seconds = 12;
     private boolean isRunning = false;
 
 
-    TimeoutManager(Discoverer discoverer) {
+    HkoTimer(Discoverer discoverer) {
         this.discoverer = discoverer;
-        this.timer = new Timer();
+        this.timer = new java.util.Timer();
     }
 
-    void startTimer() {
-
-        TestServer.echo("start Discovery Timer");
+    void start() {
 
         // cancel if timer is running
         if(isRunning){
-            TestServer.echo("restart Discovery Timer");
-            timer = new Timer();
+            TestServer.echo("restart Discovery HkoTimer");
+            timer = new java.util.Timer();
         }
 
         // start new timer
@@ -42,7 +39,6 @@ class TimeoutManager {
     private void timerExpired() {
         isRunning = false;
         discoverer.onDiscoveryTimerExpired();
-        TestServer.echo("Discovery Timer expired");
     }
 
     public boolean isDiscovery() {

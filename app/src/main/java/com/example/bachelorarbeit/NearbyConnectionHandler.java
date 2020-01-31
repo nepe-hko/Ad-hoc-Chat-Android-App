@@ -1,9 +1,13 @@
 package com.example.bachelorarbeit;
 
 import android.content.Context;
-import android.util.Log;
+import android.os.Build;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+
 import com.example.bachelorarbeit.test.TestServer;
+import com.google.android.gms.common.util.MapUtils;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -18,7 +22,9 @@ import com.google.android.gms.nearby.connection.Payload;
 import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +39,7 @@ public class NearbyConnectionHandler implements Discoverer {
     private final Map<String,String> connectedDevices;
     private final Map<String,String> pendingDevices;
     private final NearbyReceiver receiver;
-    private final TimeoutManager discoveryTimeoutManager;
+    private final HkoTimer discoveryHkoTimer;
     private final ConnectionsClient connectionsClient;
 
 
@@ -44,7 +50,7 @@ public class NearbyConnectionHandler implements Discoverer {
         this.receiver = receiver;
         this.connectedDevices = new HashMap<>();
         this.pendingDevices = new HashMap<>();
-        this.discoveryTimeoutManager = new TimeoutManager(this);
+        this.discoveryHkoTimer = new HkoTimer(this);
         this.connectionsClient = Nearby.getConnectionsClient(context);
 
         startAdvertise();
@@ -75,10 +81,12 @@ public class NearbyConnectionHandler implements Discoverer {
             pendingDevices.remove(username);
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         public void onDisconnected(@NonNull String nearbyID) {
-            connectedDevices.remove(connectedDevices.get(nearbyID));
-            TestServer.echo("disconnected from " + connectedDevices.get(nearbyID));
+            String userID = getUserIDbyNearbyID(nearbyID);
+            TestServer.echo("disconnected from " + userID);
+            connectedDevices.remove(userID);
         }
     };
 
@@ -90,7 +98,7 @@ public class NearbyConnectionHandler implements Discoverer {
 
         connectionsClient.startAdvertising(myID, SERVICE_ID, clc, options)
                 .addOnSuccessListener( (Void unused) -> TestServer.echo("start Advertise..."))
-                .addOnFailureListener( (Exception e) -> Log.e("Advertise", "not able to Advertise"));
+                .addOnFailureListener( (Exception e) -> TestServer.echo("Advertise failed"));
     }
 
     /**
@@ -98,41 +106,63 @@ public class NearbyConnectionHandler implements Discoverer {
      * discovering stops automatically, after timer expired
      */
     private void startDiscover() {
-        Log.d("nearby", "startDiscover()");
 
         TestServer.echo("start Discover");
 
-        if (discoveryTimeoutManager.isDiscovery()) {
-            Log.d("nearby (startDiscover)", "is already discovering");
+        if (discoveryHkoTimer.isDiscovery()) {
             return;
         }
 
-        discoveryTimeoutManager.startTimer();
+        discoveryHkoTimer.start();
 
         EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
+
             @Override
             public void onEndpointFound(@NonNull String nearbyID, @NonNull DiscoveredEndpointInfo discoveredEndpointInfo) {
-                TestServer.echo(discoveredEndpointInfo.getEndpointName() + " found");
-                if (!connectedDevices.containsValue(nearbyID) || !pendingDevices.containsValue(nearbyID)) {
-                    requestConnection( nearbyID, discoveredEndpointInfo);
-                } else {
-                    TestServer.echo("already connected to" + discoveredEndpointInfo.getEndpointName());
+
+                // only for testing
+                if (myID.equals("MARCO") && discoveredEndpointInfo.getEndpointName().equals("DANIEL")) {
+                    return;
+                }
+                if (myID.equals("MARCO") && discoveredEndpointInfo.getEndpointName().equals("ASTI")) {
+                    return;
+                }
+                if (myID.equals("PATRICK") && discoveredEndpointInfo.getEndpointName().equals("ASTI")) {
+                    return;
+                }
+                if (myID.equals("DANIEL") && discoveredEndpointInfo.getEndpointName().equals("MARCO")) {
+                    return;
+                }
+                if (myID.equals("ASTI") && discoveredEndpointInfo.getEndpointName().equals("PATRICK")) {
+                    return;
+                }
+                if (myID.equals("ASTI") && discoveredEndpointInfo.getEndpointName().equals("MARCO")) {
+                    return;
+                }
+                // end testing code
+
+                if (connectedDevices.containsValue(nearbyID)){
+                    return;
+                }
+                if (pendingDevices.containsValue(nearbyID)) {
+                    return;
                 }
 
+                requestConnection(nearbyID, discoveredEndpointInfo);
             }
 
+            @RequiresApi(api = Build.VERSION_CODES.N)
             @Override
             public void onEndpointLost(@NonNull String nearbyID) {
-                connectedDevices.remove(connectedDevices.get(nearbyID));
-                TestServer.echo("lost connection to " + connectedDevices.get(nearbyID));
+
+                String userID = getUserIDbyNearbyID(nearbyID);
+                TestServer.echo("lost connection to " + userID);
+                connectedDevices.remove(userID);
             }
         };
 
         DiscoveryOptions options = new DiscoveryOptions.Builder().setStrategy(STRATEGY).build();
-
-        connectionsClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, options)
-                .addOnSuccessListener( (Void unused ) -> Log.e("Discover", "start Discover..."))
-                .addOnFailureListener( (Exception e) -> Log.e("Discover", "Unable to Discover"));
+        connectionsClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, options);
     }
 
     /**
@@ -150,7 +180,6 @@ public class NearbyConnectionHandler implements Discoverer {
             @Override
             public void onPayloadTransferUpdate(@NonNull String s, @NonNull PayloadTransferUpdate payloadTransferUpdate) {
                 // not used
-
             }
         })
                 .addOnSuccessListener(aVoid -> {})
@@ -189,7 +218,6 @@ public class NearbyConnectionHandler implements Discoverer {
         }
 
         // if not connected start Discover and return nearbyID when connected
-        Log.wtf("test", "connect() to given device");
         startDiscover();
         return CompletableFuture.supplyAsync( () -> {
             while(true) {
@@ -201,23 +229,34 @@ public class NearbyConnectionHandler implements Discoverer {
     }
 
     /**
-     * connects to all devices in range and returns them after 20 seconds
+     * connects to all devices in range and returns them after 15 seconds
      * @return Map of all connected devices
      */
     CompletableFuture<Map<String,String>> connectAll() {
-        Log.d("nearby", "connectAll()");
+
         startDiscover();
         return CompletableFuture.supplyAsync( () -> {
-            Log.d("test", "before thread");
 
             try {
-                TimeUnit.SECONDS.sleep(20);
+                TimeUnit.SECONDS.sleep(12);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            Log.d("test", "connected devices: " + connectedDevices.toString());
+
             return connectedDevices;
         });
     }
 
+    Map<String,String> getConnectedDevices() {
+        return this.connectedDevices;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private String getUserIDbyNearbyID(String nearbyID) {
+        return connectedDevices.entrySet()
+                .stream()
+                .filter(entry -> nearbyID.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .findFirst().get();
+    }
 }

@@ -3,6 +3,7 @@ package com.example.bachelorarbeit.test;
 import android.util.Log;
 
 import com.example.bachelorarbeit.types.DATA;
+import com.example.bachelorarbeit.types.RREP;
 import com.example.bachelorarbeit.types.RREQ;
 
 import java.io.IOException;
@@ -26,10 +27,8 @@ public class TestServer {
             try {
                 socket = new Socket(TEST_SERVER_IP,TEST_SERVER_PORT);
                 out = new PrintWriter(TestServer.socket.getOutputStream(), true);
-                Log.d("test", "connected to Socket");
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.d("test", "Socket connection failed");
             }
         }).start();
     }
@@ -62,6 +61,12 @@ public class TestServer {
         new Thread( () -> TestServer.out.println(myID + ": send RREQ to " + devicesString + " to get Route to " + searchedUserID)).start();
     }
 
+    public static void sendRREQ( String device, String searchedUserID) {
+        if (socket == null) return;
+
+        new Thread( () -> TestServer.out.println(myID + ": send RREQ to " + device + " to get Route to " + searchedUserID)).start();
+    }
+
     public static void receivedDATA(DATA data) {
         String sender = data.getRoute().getHopBefore(myID);
         if (sender == null)
@@ -71,5 +76,10 @@ public class TestServer {
 
     public static void receivedRREQ(RREQ rreq) {
         TestServer.echo("received RREQ with UID " + rreq.getUID());
+    }
+
+    public static void receivedRREP(RREP rrep) {
+        String sender = rrep.getRoute().getHopBefore(myID);
+        TestServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
     }
 }

@@ -1,7 +1,7 @@
 package com.example.bachelorarbeit;
 
 import android.content.Context;
-import android.util.Log;
+
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.MACK;
@@ -12,7 +12,12 @@ import com.example.bachelorarbeit.types.UACK;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.concurrent.TimeUnit;
+
 import java9.util.concurrent.CompletableFuture;
 
 
@@ -43,6 +48,11 @@ class DSRRouter {
             routeDiscovery(userID);
 
             while (true) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 if (cache.hasRoute(userID)) break;
             }
             return cache.getRoute(userID);
@@ -52,32 +62,56 @@ class DSRRouter {
 
 
     private void routeDiscovery(String userID) {
+        /* TODO: funktion sendRREQ erstellen
+            - wenn ein neues gerät verbunden wird, wird diese funktion hier aufgerufen
+            - das ganze passiert entweder so lange bis route zu userID bekannt ist, oder bis ein HkoTimer abgelaufen ist
+        * */
+/*
+        nearby.connectAll();
+        HkoTimer hkoTimer = new HkoTimer();
+        Map<String, String> alreadySend = new HashMap<>();
+        Map<String, String> sendThisLoop = new HashMap<>();
+        do {
 
+            sendThisLoop = nearby.getConnectedDevices();
+            for (int i = 0; i < sendThisLoop.size(); i++) {
+                if (alreadySend.containsKey(sendThisLoop.get("dsf")))
+            }
+            // neu verbundenes gerät?
+            String connectedDevice = "ASTI";
+            RREQ rreq = new RREQ(this.myID, userID);
+            connectionsClient.sendPayload(connectedDevice , rreq.serialize());
+            TestServer.sendRREQ(connectedDevice, userID);
+
+        } while (hkoTimer.isRunning() && !cache.hasRoute(userID));
+*/
         nearby.connectAll()
                 .thenAccept(  connectedDevices -> {
 
-                    // if already connected to the searched device insert Route
+                    // if already connected to the searched device return
                     if(connectedDevices.containsKey(userID)) {
-                        cache.setRoute(userID, new Route(userID));
                         return;
                     }
 
                     // if not connected to the searched device send a RREQ to all connected devices
-                    TestServer.sendRREQ(new ArrayList<>(connectedDevices.keySet()), userID);
                     RREQ rreq = new RREQ(this.myID, userID);
-                    List<String> receiverKeys = new ArrayList<>(connectedDevices.values());
-                    connectionsClient.sendPayload(receiverKeys , rreq.serialize());
-
+                    List<String> nearbyIDs = new ArrayList<>(connectedDevices.values());
+                    connectionsClient.sendPayload(nearbyIDs , rreq.serialize());
+                    TestServer.sendRREQ(new ArrayList<>(connectedDevices.keySet()), userID);
                 });
     }
 
-    public void deviceConnected(String userID) {
+    private void sendRREQ(RREQ rreq) {
+
+    }
+
+    void deviceConnected(String userID) {
         cache.setRoute(userID, new Route(userID));
     }
 
     void receive(Object payload) {
 
-        String payloadType = payload.getClass().toString();
+        String payloadType = payload.getClass().getSimpleName();
         switch (payloadType) {
             case "RREQ" :
                 handleRREQ((RREQ)payload);
@@ -132,8 +166,20 @@ class DSRRouter {
     }
 
     private void handleRREP(RREP rrep) {
-        String sender = rrep.getRoute().getHopBefore(myID);
-        TestServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
+
+        TestServer.receivedRREP(rrep);
+
+        if (rrep.getDestinationID().equals(myID)) {
+            String userID = rrep.getFirstHop();
+            rrep.reverseRoute();
+            rrep.removeFromRoute(myID);
+            cache.setRoute(userID, rrep.getRoute());
+            return;
+        }
+
+        // forward message to next hop
+        nearby.connect(rrep.getRoute().getNextHop(myID))
+                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
 
     }
 
@@ -142,19 +188,42 @@ class DSRRouter {
         TestServer.receivedRREQ(rreq);
 
         if(seenPackages.contains(rreq.getUID())) return;
+        rreq.addEndpointToRoute(myID);
 
-        // route known -> send RREP back
-        if (cache.hasRoute(rreq.getDestinationID())) {
-            RREP rrep = new RREP(rreq, cache.getRoute(rreq.getDestinationID()));
+        // route known
+        // send rrep back to destination
+        String destinationID = rreq.getDestinationID();
+        if (cache.hasRoute(destinationID)) {
+            rreq.addRouteToRoute(cache.getRoute(destinationID));
+            RREP rrep = new RREP(rreq);
             nearby.connect(rrep.getRoute().getNextHop(myID))
                     .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
         }
 
-        // route not known -> broadcast RREQ
+        // route not known
         else {
-            rreq.addEndpointToRoute(myID);
             nearby.connectAll()
-                    .thenAccept(  connectedDevices -> connectionsClient.sendPayload(new ArrayList<>(connectedDevices.keySet()), rreq.serialize()));
+                    .thenAccept(  connectedDevices -> {
+
+                        // now connected mit searched device --> send RREP
+                        if (cache.hasRoute(destinationID)) {
+
+                            rreq.addRouteToRoute(cache.getRoute(destinationID));
+                            RREP rrep = new RREP(rreq);
+                            nearby.connect(rrep.getRoute().getNextHop(myID))
+                                    .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
+                            return;
+                        }
+
+                        // not connected with searched device --> broadcast RREQ
+                        List<String> receivers = new ArrayList<>(connectedDevices.values());
+
+                        // Do not forward the request to the device from whom the request came
+                        String hopBefore = rreq.getRoute().getHopBefore(myID);
+                        receivers.remove(hopBefore);
+
+                        connectionsClient.sendPayload(receivers, rreq.serialize());
+                    });
         }
 
         seenPackages.add(rreq.getUID());
