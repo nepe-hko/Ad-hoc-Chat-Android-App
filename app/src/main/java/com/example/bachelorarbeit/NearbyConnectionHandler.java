@@ -108,11 +108,11 @@ public class NearbyConnectionHandler implements Discoverer {
     private void startDiscover() {
 
         TestServer.echo("start Discover");
-
+/*
         if (discoveryHkoTimer.isDiscovery()) {
             return;
         }
-
+*/
         discoveryHkoTimer.start();
 
         EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
@@ -222,6 +222,12 @@ public class NearbyConnectionHandler implements Discoverer {
         return CompletableFuture.supplyAsync( () -> {
             while(true) {
                 if (connectedDevices.containsKey(userID)) break;
+
+                try {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
             return connectedDevices.get(userID);
         });
@@ -232,19 +238,22 @@ public class NearbyConnectionHandler implements Discoverer {
      * connects to all devices in range and returns them after 15 seconds
      * @return Map of all connected devices
      */
-    CompletableFuture<Map<String,String>> connectAll() {
+    void connectAll() {
 
         startDiscover();
+        /*
         return CompletableFuture.supplyAsync( () -> {
 
             try {
-                TimeUnit.SECONDS.sleep(12);
+                TimeUnit.SECONDS.sleep(15);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
             return connectedDevices;
         });
+
+         */
     }
 
     Map<String,String> getConnectedDevices() {
@@ -252,7 +261,7 @@ public class NearbyConnectionHandler implements Discoverer {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private String getUserIDbyNearbyID(String nearbyID) {
+    public String getUserIDbyNearbyID(String nearbyID) {
         return connectedDevices.entrySet()
                 .stream()
                 .filter(entry -> nearbyID.equals(entry.getValue()))

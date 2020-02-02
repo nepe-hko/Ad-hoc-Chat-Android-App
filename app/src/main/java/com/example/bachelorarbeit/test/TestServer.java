@@ -57,6 +57,8 @@ public class TestServer {
 
     public static void sendRREQ( List<String> devices, String searchedUserID) {
         if (socket == null) return;
+        if(devices.isEmpty()) return;
+
         String devicesString = android.text.TextUtils.join(",", devices);
         new Thread( () -> TestServer.out.println(myID + ": send RREQ to " + devicesString + " to get Route to " + searchedUserID)).start();
     }

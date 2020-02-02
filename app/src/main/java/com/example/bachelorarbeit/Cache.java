@@ -20,7 +20,6 @@ public class Cache {
         routes.remove(userID);
     }
     public void setRoute (String userID,Route route) {
-        TestServer.echo("Route to " + userID + " available");
         routes.put(userID, route);
     }
     public Route getRoute (String userID) {

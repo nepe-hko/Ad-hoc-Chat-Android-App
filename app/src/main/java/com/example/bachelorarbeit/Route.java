@@ -30,6 +30,7 @@ public class Route implements Serializable {
             return this.hops.get(0);
         }
         // wenn meine eigene ID in der Route auftaucht, dann an den Hop nach mir senden
+        //TODO hier fehler
         return this.hops.get(myIndex + 1);
     }
 

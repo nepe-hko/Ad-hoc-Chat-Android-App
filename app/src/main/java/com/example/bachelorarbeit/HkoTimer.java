@@ -8,7 +8,7 @@ class HkoTimer {
 
     private final Discoverer discoverer;
     private java.util.Timer timer;
-    private final static int seconds = 12;
+    private final static int seconds = 30;
     private boolean isRunning = false;
 
 
