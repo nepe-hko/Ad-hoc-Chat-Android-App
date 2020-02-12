@@ -4,7 +4,7 @@ import com.example.bachelorarbeit.test.TestServer;
 import java.util.Timer;
 import java.util.TimerTask;
 
-class HkoTimer {
+class DiscoveryTimer {
 
     private final Discoverer discoverer;
     private java.util.Timer timer;
@@ -12,7 +12,7 @@ class HkoTimer {
     private boolean isRunning = false;
 
 
-    HkoTimer(Discoverer discoverer) {
+    DiscoveryTimer(Discoverer discoverer) {
         this.discoverer = discoverer;
         this.timer = new java.util.Timer();
     }
@@ -21,7 +21,7 @@ class HkoTimer {
 
         // cancel if timer is running
         if(isRunning){
-            TestServer.echo("restart Discovery HkoTimer");
+            TestServer.echo("restart Discovery DiscoveryTimer");
             timer = new java.util.Timer();
         }
 

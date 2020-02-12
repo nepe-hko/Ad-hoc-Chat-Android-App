@@ -38,7 +38,6 @@ class DSRRouter {
 
     public CompletableFuture<Route> getRoute(String userID) {
 
-
         return CompletableFuture.supplyAsync( () -> {
 
             if (cache.hasRoute(userID)){
@@ -47,21 +46,34 @@ class DSRRouter {
 
             RREQ rreq = new RREQ(this.myID, userID);
             seenRREQs.add(rreq.getUID());
-            sendRREQ(rreq);
-            TestServer.echo("after sendRREQ()");
-            while (true) {
+            broadcastRREQ(rreq);
+
+            do {
                 try {
                     TimeUnit.MILLISECONDS.sleep(100);
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if (cache.hasRoute(userID)) break;
-            }
+            } while (!cache.hasRoute(userID));
             return cache.getRoute(userID);
-        });
+        }).orTimeout(40,TimeUnit.SECONDS);
     }
 
-    private void sendRREQ(RREQ rreq) {
+    public void deleteRoute(String userID) {
+        cache.deleteRoute(userID);
+    }
+
+    /**
+     * broadcasts given RREQ to all devices in Range
+     * @param rreq RREQ which should be broadcasted
+     */
+    private void broadcastRREQ(RREQ rreq) {
+
+        if(rreq.getDestinationID().equals(myID)) {
+            TestServer.echo("SOMETHING WRONG: GOT RREQ FOR MYSELF");
+            return;
+        }
 
         new Thread( () -> {
             nearby.connectAll();
@@ -78,13 +90,20 @@ class DSRRouter {
                 }
 
                 // if connected to searched device -> send RREP back and return
-                if (cache.hasRoute(rreq.getDestinationID()) && !rreq.getSourceID().equals(myID)) {
-                    rreq.addRouteToRoute(cache.getRoute(rreq.getDestinationID()));
-                    RREP rrep = new RREP(rreq);
-                    // TODO: fehler: wenn ich selbst abender einer nachricht bin, darf ich kein RREP schicken (drei zeilen oben schon verbessert)
-                    nearby.connect(rrep.getRoute().getNextHop(myID))
-                            .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
-                    return;
+                if (cache.hasRoute(rreq.getDestinationID()) && !rreq.getDestinationID().equals(myID)) {
+
+                    try {
+                        rreq.addRouteToRoute(cache.getRoute(rreq.getDestinationID()));
+                        RREP rrep = new RREP(rreq);
+
+                        nearby.connect(rrep.getRoute().getNextHop(myID))
+                                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, rrep.serialize()));
+                        return;
+                    } catch (IndexOutOfBoundsException e) {
+                        e.printStackTrace();
+                        return;
+                    }
+
                 }
 
                 // not connected to searched device -> forward rreq
@@ -105,44 +124,33 @@ class DSRRouter {
                 alreadySend.putAll(connectedDev);
                 TestServer.sendRREQ(new ArrayList<>(connectedDev.keySet()), rreq.getDestinationID());
 
-            } while ( !cache.hasRoute(rreq.getDestinationID()));
+            } while ( !cache.hasRoute(rreq.getDestinationID()) );
         }).start();
 
     }
 
-    void deviceConnected(String userID) {
+    public void onDeviceConnected(String userID) {
         cache.setRoute(userID, new Route(userID));
     }
 
-    void receive(Object payload) {
+    public void receive(Object payload) {
 
         new Thread( () -> {
-        String payloadType = payload.getClass().getSimpleName();
-        switch (payloadType) {
-            case "RREQ" :
-                handleRREQ((RREQ)payload);
-                break;
-
-            case "RREP" :
-                handleRREP((RREP)payload);
-                break;
-
-            case "RERR" :
-                handleRERR((RERR)payload);
-                break;
-
-            case "DATA" :
-                handleDATA((DATA)payload);
-                break;
-
-            case "UACK" :
-                handleUACK((UACK)payload);
-                break;
-
-            case "MACK" :
-                handleMACK((MACK)payload);
-                break;
-        }
+            String payloadType = payload.getClass().getSimpleName();
+            switch (payloadType) {
+                case "RREQ" : handleRREQ((RREQ)payload);
+                    break;
+                case "RREP" : handleRREP((RREP)payload);
+                    break;
+                case "RERR" : handleRERR((RERR)payload);
+                    break;
+                case "DATA" : handleDATA((DATA)payload);
+                    break;
+                case "UACK" : handleUACK((UACK)payload);
+                    break;
+                case "MACK" : handleMACK((MACK)payload);
+                    break;
+            }
         }).start();
     }
 
@@ -150,12 +158,12 @@ class DSRRouter {
         TestServer.echo("received MACK from " + mack.getOriginalSourceID() + " for Data Package with UID " + mack.getOriginalUID());
     }
 
-    private void handleUACK(UACK uack) {
+    private void handleUACK( UACK uack) {
         TestServer.echo("received UACK from " + uack.getSourceID() + " for Data Package with UID " + uack.getOriginalUID() + " (Original Sender: " + uack.getOriginalSourceID());
     }
 
     private void handleDATA(DATA data) {
-
+        //TODO: Save Route/Routes
         TestServer.receivedDATA(data);
         if (data.getDestinationID().equals(myID)) return;
 
@@ -174,6 +182,7 @@ class DSRRouter {
 
     private void handleRREP(RREP rrep) {
 
+        //TODO: Save other Routes
         TestServer.receivedRREP(rrep);
 
         if (rrep.getDestinationID().equals(myID)) {
@@ -192,6 +201,11 @@ class DSRRouter {
 
     private void handleRREQ(RREQ rreq) {
 
+        if(rreq.getDestinationID().equals(myID)) {
+            TestServer.echo("SOMETHING WRONG: GOT RREQ FOR MYSELF");
+            return;
+        }
+
         TestServer.receivedRREQ(rreq);
 
         if(seenRREQs.contains(rreq.getUID())) return;
@@ -209,7 +223,7 @@ class DSRRouter {
         }
 
         // route not known -> broadcast RREQ
-        sendRREQ(rreq);
+        broadcastRREQ(rreq);
 
     }
 }

@@ -3,11 +3,14 @@ package com.example.bachelorarbeit;
 import android.util.Log;
 
 import com.example.bachelorarbeit.test.TestServer;
+import com.google.android.gms.common.data.DataBufferObserver;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Observable;
 
 public class Cache {
+
 
     private final Map<String,Route> routes;
 
@@ -16,7 +19,7 @@ public class Cache {
     }
 
 
-    public void deleteRoute(String userID, Route route) {
+    public void deleteRoute(String userID) {
         routes.remove(userID);
     }
     public void setRoute (String userID,Route route) {

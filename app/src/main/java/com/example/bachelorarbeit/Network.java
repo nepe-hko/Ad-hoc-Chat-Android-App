@@ -8,6 +8,8 @@ import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
 
+import java9.util.concurrent.CompletableFuture;
+
 public class Network implements NearbyReceiver {
 
     private final TextView receivedView;
@@ -30,14 +32,34 @@ public class Network implements NearbyReceiver {
      * @param message message to be transmitted
      */
     public void sendText(String userID, String message) {
-
+        TestServer.echo("sendText()");
         DATA dataPackage = new DATA(myID, userID, message);
 
         // get Route -> connect to next hop in route -> send Message to next hop
+
         router.getRoute(userID)
                 .thenAccept(dataPackage::setRoute)
                 .thenCompose( nextHop -> nearby.connect(dataPackage.getRoute().getNextHop(myID)))
-                .thenAccept( nearbyID -> connectionsClient.sendPayload(nearbyID, dataPackage.serialize()));
+                .handle( (nearbyID, exception) -> {
+                    if (exception != null) {
+                        TestServer.echo( "Could not connect to next hop");
+                        return null;
+                    }
+                    return nearbyID;
+                })
+                .thenAccept( nearbyID -> {
+                    if (nearbyID == null) {
+                        TestServer.echo("nearby id is null");
+                        router.deleteRoute(dataPackage.getRoute().getNextHop(myID));
+                        router.deleteRoute(dataPackage.getDestinationID());
+                        sendText(userID,message);
+
+                    } else {
+                        TestServer.echo("nearby id is not null");
+                        connectionsClient.sendPayload( nearbyID, dataPackage.serialize());
+                    }
+                });
+
 
     }
 
@@ -67,8 +89,12 @@ public class Network implements NearbyReceiver {
         }
     }
 
+    /**
+     * this function is called if a connection to another device is established
+     * @param userID userID from connected device
+     */
     @Override
     public void onDeviceConnected(String userID) {
-        router.deviceConnected(userID);
+        router.onDeviceConnected(userID);
     }
 }
