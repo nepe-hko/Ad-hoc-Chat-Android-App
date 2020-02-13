@@ -32,4 +32,7 @@ public class Cache {
         return routes.containsKey(userID);
     }
 
+    public void deleteRoutesContainingHop(String userID) {
+        //TODO: implement Method
+    }
 }

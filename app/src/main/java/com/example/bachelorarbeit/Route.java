@@ -34,7 +34,6 @@ public class Route implements Serializable {
         return this.hops.get(myIndex + 1);
     }
 
-    // is only needed for testing
     public String getHopBefore(String myID) {
         int myIndex = this.hops.indexOf(myID);
         if (myIndex == 0)

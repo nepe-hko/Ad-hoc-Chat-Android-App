@@ -3,6 +3,7 @@ package com.example.bachelorarbeit;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import com.example.bachelorarbeit.test.TestServer;
+import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -59,9 +60,14 @@ public class NearbyConnectionHandler implements Discoverer {
 
         @Override
         public void onDisconnected(@NonNull String nearbyID) {
-            String userID = getUserIDbyNearbyID(nearbyID);
-            TestServer.echo("disconnected from " + userID);
-            connectedDevices.remove(userID);
+            try {
+                String userID = getUserIDbyNearbyID(nearbyID);
+                TestServer.echo("disconnected from " + userID);
+                connectedDevices.remove(userID);
+            } catch (Exception e) {
+                TestServer.echo("On Disconnected Error" + e.toString());
+            }
+
         }
     };
 
@@ -100,6 +106,9 @@ public class NearbyConnectionHandler implements Discoverer {
 
             while(true) {
                 if (connectedDevices.containsKey(userID)) break;
+                if (!discoveryDiscoveryTimer.isDiscovery()) {
+                    return null;
+                }
 
                 try {
                     TimeUnit.MILLISECONDS.sleep(500);
@@ -108,7 +117,7 @@ public class NearbyConnectionHandler implements Discoverer {
                 }
             }
             return connectedDevices.get(userID);
-        }).orTimeout(10,TimeUnit.SECONDS);
+        }).orTimeout(10,TimeUnit.SECONDS); //TODO: Timeout raus?
 
     }
 
@@ -125,11 +134,14 @@ public class NearbyConnectionHandler implements Discoverer {
 
 
     public String getUserIDbyNearbyID(String nearbyID) {
-        return connectedDevices.entrySet()
-                .stream()
-                .filter(entry -> nearbyID.equals(entry.getValue()))
-                .map(Map.Entry::getKey)
-                .findFirst().get();
+
+            return connectedDevices.entrySet()
+                    .stream()
+                    .filter(entry -> nearbyID.equals(entry.getValue()))
+                    .map(Map.Entry::getKey)
+                    .findFirst().get();
+
+
     }
 
     private void startAdvertise() {
@@ -189,10 +201,13 @@ public class NearbyConnectionHandler implements Discoverer {
 
             @Override
             public void onEndpointLost(@NonNull String nearbyID) {
-                TestServer.echo("lost connection to " + nearbyID);
-                String userID = getUserIDbyNearbyID(nearbyID);
-                TestServer.echo("lost connection to " + userID);
-                connectedDevices.remove(userID);
+                try {
+                    String userID = getUserIDbyNearbyID(nearbyID);
+                    TestServer.echo("lost connection from " + userID);
+                    connectedDevices.remove(userID);
+                } catch (Exception e) {
+                    TestServer.echo("Lost Connection Error" + e.toString());
+                }
             }
         };
 
@@ -209,12 +224,14 @@ public class NearbyConnectionHandler implements Discoverer {
             @Override
             public void onPayloadReceived(@NonNull String s, @NonNull Payload payload) {
                 receiver.receive(payload.asBytes());
+
             }
 
             @Override
             public void onPayloadTransferUpdate(@NonNull String s, @NonNull PayloadTransferUpdate payloadTransferUpdate) {
-                // not used
+                receiver.onPayloadTransferUpdate(s, payloadTransferUpdate);
             }
+
         })
                 .addOnSuccessListener(aVoid -> {})
                 .addOnFailureListener( aVoid -> TestServer.echo("could not accept connection to " + pendingDevices.get(endpointID))

@@ -2,11 +2,20 @@ package com.example.bachelorarbeit;
 
 import android.content.Context;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
+import com.google.android.gms.tasks.OnCanceledListener;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import java9.util.concurrent.CompletableFuture;
 
@@ -49,13 +58,12 @@ public class Network implements NearbyReceiver {
                 })
                 .thenAccept( nearbyID -> {
                     if (nearbyID == null) {
-                        TestServer.echo("nearby id is null");
                         router.deleteRoute(dataPackage.getRoute().getNextHop(myID));
                         router.deleteRoute(dataPackage.getDestinationID());
                         sendText(userID,message);
 
                     } else {
-                        TestServer.echo("nearby id is not null");
+                        TestServer.sendDATA(dataPackage);
                         connectionsClient.sendPayload( nearbyID, dataPackage.serialize());
                     }
                 });
@@ -87,6 +95,11 @@ public class Network implements NearbyReceiver {
                 TestServer.echo("received a Message " + text);
             }
         }
+    }
+
+    @Override
+    public void onPayloadTransferUpdate(String nearbyID, PayloadTransferUpdate payloadTransferUpdate) {
+        router.onPayloadTransferupdate(nearbyID, payloadTransferUpdate);
     }
 
     /**

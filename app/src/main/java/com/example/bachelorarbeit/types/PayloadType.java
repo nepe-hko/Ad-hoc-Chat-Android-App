@@ -38,4 +38,8 @@ public abstract class PayloadType implements Serializable {
             return null;
         }
     }
+
+    public String getType() {
+        return type;
+    }
 }

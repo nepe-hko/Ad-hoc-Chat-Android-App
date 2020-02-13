@@ -84,4 +84,8 @@ public class TestServer {
         String sender = rrep.getRoute().getHopBefore(myID);
         TestServer.echo("received RREP with UID " + rrep.getUID() + " from" + sender + " (Destination: " + rrep.getDestinationID() + ")");
     }
+
+    public static void sendDATA(DATA data) {
+        TestServer.echo("send DATA to " + data.getDestinationID() + " to" + data.getRoute().getNextHop(myID));
+    }
 }

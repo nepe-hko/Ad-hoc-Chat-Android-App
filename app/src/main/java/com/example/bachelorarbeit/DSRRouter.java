@@ -5,12 +5,17 @@ import android.content.Context;
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.MACK;
+import com.example.bachelorarbeit.types.PayloadType;
 import com.example.bachelorarbeit.types.RERR;
 import com.example.bachelorarbeit.types.RREP;
 import com.example.bachelorarbeit.types.RREQ;
 import com.example.bachelorarbeit.types.UACK;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.ConnectionsClient;
+import com.google.android.gms.nearby.connection.Payload;
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
+
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -224,6 +229,63 @@ class DSRRouter {
 
         // route not known -> broadcast RREQ
         broadcastRREQ(rreq);
+
+    }
+
+    public void sendPayload(String nearbyID , PayloadType payload) {
+        connectionsClient.sendPayload(nearbyID, payload.serialize());
+    }
+
+    public void sendPayload(List<String> nearbyID , PayloadType payload) {
+        connectionsClient.sendPayload(nearbyID, payload.serialize());
+    }
+
+
+    public void onPayloadTransferupdate(String nearbyID, PayloadTransferUpdate payloadTransferUpdate) {
+        String payloadID = Long.toString(payloadTransferUpdate.getPayloadId());
+        int status = payloadTransferUpdate.getStatus();
+
+        long l = payloadTransferUpdate.getBytesTransferred();
+        byte [] bytesTransferred = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).putLong(l).array();
+        PayloadType payload = (PayloadType) PayloadType.deserialize(bytesTransferred);
+        assert payload != null;
+        if (!payload.getType().equals("DATA")) return;
+        DATA data = (DATA) payload;
+
+        switch (status)
+        {
+            case PayloadTransferUpdate.Status.SUCCESS :
+                if (data.getDestinationID().equals(myID)) {
+                    // send ACK to Source
+                }
+                break;
+
+            case PayloadTransferUpdate.Status.FAILURE :
+
+                try {
+
+
+
+
+                    if (data.getSourceID().equals(myID)) {
+                        // Delete Routes containting failed hop
+                        String failedHopUserID = data.getRoute().getNextHop(myID);
+                        cache.deleteRoutesContainingHop(failedHopUserID);
+
+                        // send DATA again
+
+                    } else {
+                        // send RERR to Source
+                    }
+
+                } catch (Exception e) {
+                    TestServer.echo("Failed do serialize DATA in onPayloadTransferUpdate");
+                }
+
+                break;
+
+        }
+
 
     }
 }
