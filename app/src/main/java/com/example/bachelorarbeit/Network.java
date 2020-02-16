@@ -3,36 +3,23 @@ package com.example.bachelorarbeit;
 import android.content.Context;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
 import com.example.bachelorarbeit.types.PayloadType;
-import com.google.android.gms.nearby.Nearby;
-import com.google.android.gms.nearby.connection.ConnectionsClient;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
-import com.google.android.gms.tasks.OnCanceledListener;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-
-import java9.util.concurrent.CompletableFuture;
 
 public class Network implements NearbyReceiver {
 
     private final TextView receivedView;
     private final String myID;
     private final DSRRouter router;
-    private final ConnectionsClient connectionsClient;
-    private final NearbyConnectionHandler nearby;
 
     public Network(Context context, String username, TextView receivedView) {
         this.receivedView = receivedView;
         this.myID = username;
-        this.nearby = new NearbyConnectionHandler(context, myID, this);
-        this.router = new DSRRouter(context, this.nearby, myID);
-        this.connectionsClient = Nearby.getConnectionsClient(context);
+        NearbyConnectionHandler nearby = new NearbyConnectionHandler(context, myID, this);
+        this.router = new DSRRouter(context, nearby, myID, this);
+
     }
 
     /**
@@ -41,42 +28,27 @@ public class Network implements NearbyReceiver {
      * @param message message to be transmitted
      */
     public void sendText(String userID, String message) {
-        TestServer.echo("sendText()");
+
         DATA dataPackage = new DATA(myID, userID, message);
 
         // get Route -> connect to next hop in route -> send Message to next hop
-
         router.getRoute(userID)
                 .thenAccept(dataPackage::setRoute)
-                .thenCompose( nextHop -> nearby.connect(dataPackage.getRoute().getNextHop(myID)))
-                .handle( (nearbyID, exception) -> {
-                    if (exception != null) {
-                        TestServer.echo( "Could not connect to next hop");
-                        return null;
-                    }
-                    return nearbyID;
-                })
-                .thenAccept( nearbyID -> {
-                    if (nearbyID == null) {
-                        router.deleteRoute(dataPackage.getRoute().getNextHop(myID));
-                        router.deleteRoute(dataPackage.getDestinationID());
-                        sendText(userID,message);
-
-                    } else {
-                        TestServer.sendDATA(dataPackage);
-                        connectionsClient.sendPayload( nearbyID, dataPackage.serialize());
-                    }
+                .thenCompose(nothing -> router.sendDATA(dataPackage))
+                .thenCompose(router::notifyStatus)
+                .thenAccept( status -> {
+                    TestServer.echo("ACK result: " + status);
+                    receivedView.setText( message + " (" + status + ")" +  "\n" + receivedView.getText());
                 });
-
-
     }
+
 
     /**
      * this function is called for incoming receivedDATA from other devices
      * @param data receivedDATA received from other device
      */
     @Override
-    public void receive(byte[] data) {
+    public void onReceive(byte[] data) {
 
         // unpack payload
         Object payload = PayloadType.deserialize(data);

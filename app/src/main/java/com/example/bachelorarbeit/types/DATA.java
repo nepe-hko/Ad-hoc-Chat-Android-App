@@ -27,7 +27,8 @@ public class DATA extends PayloadType  {
     public String getUID() { return uID; }
     public String getDestinationID() { return destinationID; }
     public Route getRoute() { return route; }
-    public void setRoute(Route route) { this.route = route; }
+    public void setRoute(Route route) {
+        this.route = route; }
     public String getMessage() { return message; }
 
 }

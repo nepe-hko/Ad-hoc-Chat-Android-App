@@ -53,4 +53,9 @@ public class Route implements Serializable {
     public void remove(String userID) {
         this.hops.remove(userID);
     }
+
+    public void removeHopsAfterIncl(String myID) {
+        int myIndex = this.hops.indexOf(myID);
+        hops.subList(myIndex, hops.size()).clear();
+    }
 }

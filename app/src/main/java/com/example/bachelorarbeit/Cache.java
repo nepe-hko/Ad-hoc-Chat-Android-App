@@ -1,18 +1,13 @@
 package com.example.bachelorarbeit;
 
-import android.util.Log;
-
-import com.example.bachelorarbeit.test.TestServer;
-import com.google.android.gms.common.data.DataBufferObserver;
-
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Observable;
+import java.util.stream.Collectors;
 
 public class Cache {
 
 
-    private final Map<String,Route> routes;
+    private  Map<String,Route> routes;
 
     public Cache() {
         this.routes = new HashMap<>();
@@ -33,6 +28,10 @@ public class Cache {
     }
 
     public void deleteRoutesContainingHop(String userID) {
-        //TODO: implement Method
+        //TODO: test Method
+        this.routes = this.routes.entrySet()
+                .stream()
+                .filter(entry -> !entry.getValue().getHops().contains(userID))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

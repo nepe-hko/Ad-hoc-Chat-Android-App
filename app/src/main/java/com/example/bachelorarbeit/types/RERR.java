@@ -11,17 +11,23 @@ public class RERR extends PayloadType  {
     private String destinationID;
     private Route route;
 
-    public RERR () {
+    public RERR (DATA data,  String myID) {
+        //TODO: include failed hop in RREQ
         super.type = "RERR";
-        this.uID = UUID.randomUUID().toString();
+        this.uID = data.getUID();
+        this.sourceID = myID;
+        this.destinationID = data.getSourceID();
+
+        Route r = data.getRoute();
+        r.removeHopsAfterIncl(myID);
+        r.reverse();
+        r.addHop(data.getSourceID());
+        this.route = r;
     }
 
     public String getSourceID() { return sourceID; }
-    public void setSourceID(String sourceID) { this.sourceID = sourceID; }
     public String getUID() { return uID; }
-    public void setUID(String uID) { this.uID = uID; }
     public String getDestinationID() { return destinationID; }
-    public void setDestinationID(String destinationID) { this.destinationID = destinationID; }
     public Route getRoute() { return route; }
     public void setRoute(Route route) { this.route = route; }
 

@@ -58,7 +58,7 @@ public class ChatOverviewActivity extends AppCompatActivity {
         TestServer.echo(myID + " -> " + destinationID + " : " + message);
     }
 
-    private void addToTextView(String sender, String receiver, String message) {
+    public void addToTextView(String sender, String receiver, String message) {
         this.receivedView.setText(sender + " -> " + receiver + ": " + message + "\n" + receivedView.getText());
     }
 }

@@ -3,7 +3,6 @@ package com.example.bachelorarbeit;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import com.example.bachelorarbeit.test.TestServer;
-import com.example.bachelorarbeit.types.PayloadType;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -20,11 +19,7 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import java9.util.concurrent.CompletableFuture;
 
@@ -117,7 +112,7 @@ public class NearbyConnectionHandler implements Discoverer {
                 }
             }
             return connectedDevices.get(userID);
-        }).orTimeout(10,TimeUnit.SECONDS); //TODO: Timeout raus?
+        }).orTimeout(10,TimeUnit.SECONDS); //TODO: Timeout raus? geht aus schleife, wenn nicht mehr discovert wird
 
     }
 
@@ -223,7 +218,7 @@ public class NearbyConnectionHandler implements Discoverer {
         connectionsClient.acceptConnection(endpointID, new PayloadCallback() {
             @Override
             public void onPayloadReceived(@NonNull String s, @NonNull Payload payload) {
-                receiver.receive(payload.asBytes());
+                receiver.onReceive(payload.asBytes());
 
             }
 
