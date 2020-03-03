@@ -2,10 +2,10 @@ package com.example.bachelorarbeit.types;
 
 import com.example.bachelorarbeit.Route;
 
-public class ACK extends PayloadType  {
-    private String originalSourceID;
-    private String originalUID;
-    private Route route;
+public class ACK extends NearbyPayload {
+    private final String originalSourceID;
+    private final String originalUID;
+    private final Route route;
 
     public ACK(DATA data) {
         super.type = "ACK";

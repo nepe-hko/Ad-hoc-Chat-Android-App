@@ -3,6 +3,7 @@ package com.example.bachelorarbeit.test;
 import android.util.Log;
 
 import com.example.bachelorarbeit.types.DATA;
+import com.example.bachelorarbeit.types.RERR;
 import com.example.bachelorarbeit.types.RREP;
 import com.example.bachelorarbeit.types.RREQ;
 
@@ -14,7 +15,7 @@ import java.util.List;
 public class TestServer {
 
     private static String TEST_SERVER_IP = "80.139.87.232";
-    private static int TEST_SERVER_PORT = 16443;
+    private static int TEST_SERVER_PORT = 16445;
     private static Socket socket = null;
     private static PrintWriter out;
     private static String myID;
@@ -87,5 +88,12 @@ public class TestServer {
 
     public static void sendDATA(DATA data) {
         TestServer.echo("send DATA to " + data.getDestinationID() + " to" + data.getRoute().getNextHop(myID));
+    }
+
+    public static void receivedRERR(RERR rerr) {
+        String sender = rerr.getRoute().getHopBefore(myID);
+        if (sender == null)
+            sender = rerr.getSourceID();
+        TestServer.echo("received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
     }
 }

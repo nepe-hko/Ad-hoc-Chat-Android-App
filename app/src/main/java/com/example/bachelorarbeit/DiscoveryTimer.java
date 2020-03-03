@@ -7,8 +7,8 @@ import java.util.TimerTask;
 class DiscoveryTimer {
 
     private final Discoverer discoverer;
-    private java.util.Timer timer;
-    private final static int seconds = 30;
+    private Timer timer;
+    private final static int seconds = 80;
     private boolean isRunning = false;
 
 

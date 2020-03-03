@@ -33,7 +33,7 @@ public class NearbyConnectionHandler implements Discoverer {
     private final NearbyReceiver receiver;
     private final DiscoveryTimer discoveryDiscoveryTimer;
     private final ConnectionsClient connectionsClient;
-    private ConnectionLifecycleCallback clc = new ConnectionLifecycleCallback() {
+    private final ConnectionLifecycleCallback clc = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointID, @NonNull ConnectionInfo connectionInfo) {
             pendingDevices.put(endpointID, connectionInfo.getEndpointName());
@@ -97,10 +97,11 @@ public class NearbyConnectionHandler implements Discoverer {
 
         // if not connected start Discover and return nearbyID when connected
         startDiscover();
+        boolean end;
         return CompletableFuture.supplyAsync( () -> {
 
             while(true) {
-                if (connectedDevices.containsKey(userID)) break;
+                if (connectedDevices.containsKey(userID) ) break;
                 if (!discoveryDiscoveryTimer.isDiscovery()) {
                     return null;
                 }
@@ -112,7 +113,7 @@ public class NearbyConnectionHandler implements Discoverer {
                 }
             }
             return connectedDevices.get(userID);
-        }).orTimeout(10,TimeUnit.SECONDS); //TODO: Timeout raus? geht aus schleife, wenn nicht mehr discovert wird
+        }).orTimeout(30,TimeUnit.SECONDS);
 
     }
 
@@ -123,22 +124,22 @@ public class NearbyConnectionHandler implements Discoverer {
         startDiscover();
     }
 
-    Map<String,String> getConnectedDevices() {
-        return this.connectedDevices;
-    }
-
-
+    /**
+     * returns the userID of a user by its nearbyID
+     * @param nearbyID
+     * @return userID of the User
+     */
     public String getUserIDbyNearbyID(String nearbyID) {
-
             return connectedDevices.entrySet()
                     .stream()
                     .filter(entry -> nearbyID.equals(entry.getValue()))
                     .map(Map.Entry::getKey)
                     .findFirst().get();
-
-
     }
 
+    /**
+     * starts Advertise
+     */
     private void startAdvertise() {
 
         AdvertisingOptions options = new AdvertisingOptions.Builder().setStrategy(STRATEGY).build();
@@ -149,7 +150,7 @@ public class NearbyConnectionHandler implements Discoverer {
     }
 
     /**
-     * starts Discovering
+     * starts Discover
      * discovering stops automatically, after timer expired
      */
     private void startDiscover() {
@@ -182,12 +183,16 @@ public class NearbyConnectionHandler implements Discoverer {
                 if (myID.equals("ASTI") && discoveredEndpointInfo.getEndpointName().equals("MARCO")) {
                     return;
                 }
-                // end testing code
 
-                if (connectedDevices.containsValue(nearbyID)){
+                if (myID.equals("PATRICK") && discoveredEndpointInfo.getEndpointName().equals("LUSH")) {
                     return;
                 }
-                if (pendingDevices.containsValue(nearbyID)) {
+                if (myID.equals("LUSH") && discoveredEndpointInfo.getEndpointName().equals("PATRICK")) {
+                    return;
+                }
+                // end testing code
+
+                if (connectedDevices.containsValue(nearbyID) || pendingDevices.containsValue(nearbyID)){
                     return;
                 }
 
@@ -242,5 +247,9 @@ public class NearbyConnectionHandler implements Discoverer {
         connectionsClient.requestConnection(myID, endpointID, clc)
                 .addOnSuccessListener((Void unused) -> {})
                 .addOnFailureListener((Exception e) -> TestServer.echo("request Connection to " + info.getEndpointName() + " failed"));
+    }
+
+    Map<String,String> getConnectedDevices() {
+        return this.connectedDevices;
     }
 }

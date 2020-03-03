@@ -9,8 +9,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-public abstract class PayloadType implements Serializable {
-    String type;
+public abstract class NearbyPayload implements Serializable {
+    protected String type;
 
     public Payload serialize() {
         try {

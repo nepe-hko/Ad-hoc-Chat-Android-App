@@ -5,11 +5,11 @@ import com.example.bachelorarbeit.Route;
 import java.util.List;
 import java.util.UUID;
 
-public class RREQ extends PayloadType  {
+public class RREQ extends NearbyPayload {
 
-    private String sourceID;
-    private String uID;
-    private String destinationID;
+    private final String sourceID;
+    private final String uID;
+    private final String destinationID;
     private Route route;
 
     public RREQ (String sourceID, String destinationID) {

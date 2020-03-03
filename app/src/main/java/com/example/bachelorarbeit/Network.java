@@ -5,7 +5,7 @@ import android.widget.TextView;
 
 import com.example.bachelorarbeit.test.TestServer;
 import com.example.bachelorarbeit.types.DATA;
-import com.example.bachelorarbeit.types.PayloadType;
+import com.example.bachelorarbeit.types.NearbyPayload;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 
 public class Network implements NearbyReceiver {
@@ -24,18 +24,24 @@ public class Network implements NearbyReceiver {
 
     /**
      * sends a message to another device
-     * @param userID username of receiver
+     * @param destinationUserID username of receiver
      * @param message message to be transmitted
      */
-    public void sendText(String userID, String message) {
+    public void sendText(String destinationUserID, String message, boolean retry) {
 
-        DATA dataPackage = new DATA(myID, userID, message);
+        DATA data = new DATA(myID, destinationUserID, message);
+
+        TestServer.echo(myID + " -> " + destinationUserID + " : " + message);
 
         // get Route -> connect to next hop in route -> send Message to next hop
-        router.getRoute(userID)
-                .thenAccept(dataPackage::setRoute)
-                .thenCompose(nothing -> router.sendDATA(dataPackage))
-                .thenCompose(router::notifyStatus)
+        router.getRoute(destinationUserID)
+                .thenAccept(data::setRoute)
+                .thenAccept(nothing -> router.sendDATA(data));
+
+
+        if (retry) return;
+
+        router.notifyStatus(data)
                 .thenAccept( status -> {
                     TestServer.echo("ACK result: " + status);
                     receivedView.setText( message + " (" + status + ")" +  "\n" + receivedView.getText());
@@ -51,7 +57,7 @@ public class Network implements NearbyReceiver {
     public void onReceive(byte[] data) {
 
         // unpack payload
-        Object payload = PayloadType.deserialize(data);
+        Object payload = NearbyPayload.deserialize(data);
         assert payload != null;
 
         // forward all messages to router

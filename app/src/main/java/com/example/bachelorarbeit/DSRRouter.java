@@ -26,7 +26,8 @@ import java9.util.concurrent.CompletableFuture;
 class DSRRouter {
 
     private final Cache cache;
-    private final List<String> seenRREQs = new ArrayList<>(); //TODO: liste irgendwann wieder leeren
+    private final List<String> seenRREQs = new ArrayList<>();
+    private final List<String> seenRREPs = new ArrayList<>();
     private final ConnectionsClient connectionsClient;
     private final NearbyConnectionHandler nearby;
     private final String myID;
@@ -65,7 +66,7 @@ class DSRRouter {
                 }
             } while (!cache.hasRoute(userID));
             return cache.getRoute(userID);
-        }).orTimeout(40,TimeUnit.SECONDS);
+        }).orTimeout(80,TimeUnit.SECONDS);
     }
 
     public void onDeviceConnected(String userID) {
@@ -123,15 +124,19 @@ class DSRRouter {
     }
 
     private void handleRERR(RERR rerr) {
-        String sender = rerr.getRoute().getHopBefore(myID);
-        if (sender == null)
-            sender = rerr.getSourceID();
-        TestServer.echo("received RERR with UID " + rerr.getUID() + " from" + sender + " (Original Sender: " + rerr.getSourceID() + ", Destination: " + rerr.getDestinationID() + ")");
 
+        TestServer.receivedRERR(rerr);
 
+        String unreachableHop = rerr.getRoute().getHops().get(0);
+        String hopDetectedError = rerr.getRoute().getHops().get(1);
+        cache.deleteRoutesContainingSeries(unreachableHop, hopDetectedError);
 
         if(rerr.getDestinationID().equals(myID)) {
             TestServer.echo("RERR für mich erhalten");
+
+            // erneut senden
+            DATA data = awaitingACKs.get(rerr.getUID());
+            network.sendText(data.getDestinationID(), data.getMessage(), true);
             return;
         }
 
@@ -142,12 +147,15 @@ class DSRRouter {
 
     private void handleRREP(RREP rrep) {
 
-        //TODO: Save other Routes
         TestServer.receivedRREP(rrep);
 
         if (rrep.getDestinationID().equals(myID)) {
-            //TODO: dont save route, if another rrep with same uid was faster
-            //      or better: save this route as alternative route
+
+            if (seenRREPs.contains(rrep.getUID())) {
+                return;
+            }
+            seenRREPs.add(rrep.getUID());
+
             String userID = rrep.getFirstHop();
             rrep.reverseRoute();
             rrep.removeFromRoute(myID);
@@ -202,12 +210,9 @@ class DSRRouter {
 
         switch (status)
         {
-
             case PayloadTransferUpdate.Status.SUCCESS :
-                awaitingACKs.put(data.getUID(),data);
                 outgoingPayloads.remove(payloadID);
                 break;
-
 
             case PayloadTransferUpdate.Status.FAILURE :
 
@@ -218,26 +223,24 @@ class DSRRouter {
                     // If this node was sender of DATA package -> Delete Routes containting failed hop and send again
                     if (data.getSourceID().equals(myID)) {
                         TestServer.echo("try again to send Message");
-                        network.sendText(data.getDestinationID(), data.getMessage());
+                        network.sendText(data.getDestinationID(), data.getMessage(), true);
                     }
 
                 } catch (Exception e) {
                     TestServer.echo("Failed do serialize DATA in onPayloadTransferUpdate");
                 }
-
                 break;
-
         }
-
-
     }
 
     /**
      * Notifys about the waiting ACK
-     * @param ackUID ACK to wait for
+     * @param data data packet for which an ACK is waited
      * @return SUCCESS or FAILURE, depending on whether ACK is available or not
      */
-    public CompletableFuture<String> notifyStatus(String ackUID) {
+    public CompletableFuture<String> notifyStatus(DATA data) {
+
+        awaitingACKs.put(data.getUID(),data);
 
         return CompletableFuture.supplyAsync( () -> {
             do {
@@ -247,10 +250,10 @@ class DSRRouter {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-            } while (!isACKAvailable(ackUID));
+            } while (!isACKAvailable(data.getUID()));
             return "SUCCESS";
         })
-                .completeOnTimeout("FAILURE", 30,TimeUnit.SECONDS);
+                .completeOnTimeout("FAILURE", 80,TimeUnit.SECONDS);
 
     }
 
@@ -268,7 +271,7 @@ class DSRRouter {
      * @param data DATA which should be send
      * @return UID of DATA Package
      */
-    public CompletableFuture<String> sendDATA(DATA data) {
+    public void sendDATA(DATA data) {
 
         Payload payload = data.serialize();
         outgoingPayloads.put(payload.getId(), data);
@@ -286,16 +289,18 @@ class DSRRouter {
                     if (nearbyID == null) {
                         cache.deleteRoutesContainingHop(data.getRoute().getNextHop(myID));
                         TestServer.echo("send RERR");
-                        RERR rerr = new RERR(data, myID);
-                        sendRERR(rerr);
-
+                        if (!data.getSourceID().equals(myID)) {
+                            RERR rerr = new RERR(data, myID);
+                            sendRERR(rerr);
+                        } else {
+                            network.sendText(data.getDestinationID(), data.getMessage(), true);
+                        }
                     // erfolgreich zum nächsten hop verbunden
                     } else {
                         TestServer.sendDATA(data);
                         connectionsClient.sendPayload( nearbyID, payload);
                     }
                 });
-        return CompletableFuture.completedFuture(data.getUID());
     }
 
     /**

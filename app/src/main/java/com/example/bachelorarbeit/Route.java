@@ -22,15 +22,14 @@ public class Route implements Serializable {
         this.hops.addAll(hops);
     }
 
-    public String getNextHop(String myID) {
+    public String getNextHop(String currentHop) {
 
-        // wenn meine eigene ID nicht in der Route auftaucht, dann an ersten Hop in Route senden
-        int myIndex = this.hops.indexOf(myID);
+        // if route does not contain currentHop, return first hop in Route
+        int myIndex = this.hops.indexOf(currentHop);
         if (myIndex == -1) {
             return this.hops.get(0);
         }
-        // wenn meine eigene ID in der Route auftaucht, dann an den Hop nach mir senden
-        //TODO hier fehler
+        // ir route does contain current, return hop after current hop
         return this.hops.get(myIndex + 1);
     }
 
@@ -54,8 +53,18 @@ public class Route implements Serializable {
         this.hops.remove(userID);
     }
 
-    public void removeHopsAfterIncl(String myID) {
-        int myIndex = this.hops.indexOf(myID);
-        hops.subList(myIndex, hops.size()).clear();
+    public void removeHopsAfter(String userID) {
+        int myIndex = this.hops.indexOf(userID);
+        hops.subList(myIndex + 1, hops.size()).clear();
+    }
+
+    public boolean containsSeries(String userID1, String userID2) {
+        for(int i = 0; i < hops.size() - 1; i++) {
+            if ((hops.get(i).equals(userID1) && hops.get(i+1).equals(userID2)) ||
+                    (hops.get(i).equals(userID2) && hops.get(i+1).equals(userID1))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

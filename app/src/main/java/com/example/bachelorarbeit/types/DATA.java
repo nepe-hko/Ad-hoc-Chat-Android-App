@@ -4,12 +4,13 @@ import com.example.bachelorarbeit.Route;
 
 import java.util.UUID;
 
-public class DATA extends PayloadType  {
-    private String sourceID;
-    private String uID;
-    private String destinationID;
+public class DATA extends NearbyPayload {
+    private final String sourceID;
+    private final String uID;
+    private final String destinationID;
+    private final String message;
     private Route route;
-    private String message;
+
 
     public DATA (String sourceID, String destinationID, String message) {
         super.type = "DATA";
@@ -19,16 +20,11 @@ public class DATA extends PayloadType  {
         this.message = message;
     }
 
-    public void addtoRoute(String endpointID) {
-        this.route.addHop(endpointID);
-    }
-
     public String getSourceID() { return sourceID; }
     public String getUID() { return uID; }
     public String getDestinationID() { return destinationID; }
     public Route getRoute() { return route; }
-    public void setRoute(Route route) {
-        this.route = route; }
+    public void setRoute(Route route) { this.route = route; }
     public String getMessage() { return message; }
 
 }
